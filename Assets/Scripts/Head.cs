@@ -30,7 +30,7 @@ public class Head : MonoBehaviour
     public GameObject poopPrefab;
     public GameObject food;
     private Vector3 tmp;
-    private bool poopCounting;
+    private bool digesting;
     private int poopCount;
     public int digestMoveNumber = 3;
     private int poopDamage = 1;
@@ -111,7 +111,7 @@ public class Head : MonoBehaviour
         
         transform.position = unitScale * now + (Vector2)transform.position;
 
-        if (poopCounting)
+        if (digesting)
         {
             if (poopCount > 0)
             {
@@ -120,7 +120,7 @@ public class Head : MonoBehaviour
             else
             {
                 CreatePoop(TailTransform ? TailTransform.position : tmp);
-                poopCounting = false;
+                digesting = false;
             }
         }
         if (TailTransform)
@@ -175,7 +175,7 @@ public class Head : MonoBehaviour
             Destroy(food);
             food = null;
             CreateBody(TailTransform ? TailTransform.position : transform.position);
-            poopCounting = true;
+            digesting = true;
             poopCount = digestMoveNumber;
             Manager.manager.CreateFood();
         }

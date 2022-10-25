@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Random = UnityEngine.Random;
 // ReSharper disable Unity.InefficientPropertyAccess
 
 public class Manager : MonoBehaviour
@@ -21,6 +20,7 @@ public class Manager : MonoBehaviour
     public AudioClip[] audioClips;
     public AudioSource audioSource;
     private Coroutine ledHandler;
+    public Vector2Int gridMax;
 
     private void Awake()
     {
@@ -29,8 +29,12 @@ public class Manager : MonoBehaviour
         border.size = new Vector2(borderSize.y * 2 - 1.5f, borderSize.y * 2 - 1.5f);
         spriteRenderer.size = new Vector2(borderSize.y * 2 - 0.5f, borderSize.y * 2 - 0.5f);
         transform.position = new Vector3(borderSize.y - borderSize.x, 0);
+        
+        gridMax = new Vector2Int(
+            (int)(spriteRenderer.size.x / 0.5f) / 2,
+            (int)(spriteRenderer.size.y / 0.5f) / 2);
     }
-    
+
     public void StartGame() {
         head = Instantiate(headPrefab).GetComponent<Head>();
         head.transform.position = transform.position;
@@ -122,14 +126,40 @@ public class Manager : MonoBehaviour
     
     public void CreateFood()
     {
-        var x = Random.Range(-borderSize.y + 1, borderSize.y - 1);
-        var y = Random.Range(-borderSize.y + 1, borderSize.y - 1);
-        x += transform.position.x;
+
+        var fixedPos = GetRandomPos();
+
+        while (IsPosOccupied(fixedPos))
+        {
+            fixedPos = GetRandomPos();
+        }
+        
         if (!head.food)
         {
-            head.food = Instantiate(head.foodPrefab, new Vector3(x, y), Quaternion.identity);
+            head.food = Instantiate(head.foodPrefab, fixedPos, Quaternion.identity);
         }
-        else head.food.transform.position = new Vector3(x, y);
+        else head.food.transform.position = fixedPos;
+    }
+
+    public Vector2 GetRandomPos()
+    {
+        var gridPos = GridPrinter.GetRandomGridPos(gridMax);
+        return GridPrinter.GridToWorldPoint(gridPos, transform.position);
+    }
+
+    public bool IsPosOccupied(Vector2 pos)
+    {
+        // ReSharper disable once Unity.PreferNonAllocApi
+        var colliders = Physics2D.OverlapPointAll(pos);
+        if (colliders.Length > 0)
+        {
+            foreach (Collider2D other in colliders)
+            {
+                Debug.Log(other.tag);
+            }
+            return true;
+        }
+        return false;
     }
 
     public void PlayAudio(int index) {
