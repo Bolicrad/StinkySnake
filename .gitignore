@@ -10,6 +10,7 @@
 /[Ll]ogs/
 /[Mm]emoryCaptures/
 /[Uu]serSettings/
+/.idea/
 
 # Asset meta data should only be ignored when the corresponding asset is also ignored
 !/[Aa]ssets/**/*.meta
@@ -61,3 +62,4 @@ crashlytics-build.properties
 
 .DS_Store
 UserSettings/Layouts/default-2021.dwlt
+.idea/.idea.StinkySnake/.idea/misc.xml

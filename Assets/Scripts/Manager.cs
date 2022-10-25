@@ -1,11 +1,10 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
+// ReSharper disable Unity.InefficientPropertyAccess
 
 public class Manager : MonoBehaviour
 {
@@ -21,23 +20,17 @@ public class Manager : MonoBehaviour
     private Vector3 borderSize;
     public AudioClip[] audioClips;
     public AudioSource audioSource;
-    private Coroutine lEDHandler;
+    private Coroutine ledHandler;
 
     private void Awake()
     {
         manager = this;
-        borderSize = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height));
+        borderSize = Camera.main!.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height));
         border.size = new Vector2(borderSize.y * 2 - 1.5f, borderSize.y * 2 - 1.5f);
         spriteRenderer.size = new Vector2(borderSize.y * 2 - 0.5f, borderSize.y * 2 - 0.5f);
         transform.position = new Vector3(borderSize.y - borderSize.x, 0);
     }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        //startGame();
-    }
-
+    
     public void StartGame() {
         head = Instantiate(headPrefab).GetComponent<Head>();
         head.transform.position = transform.position;
@@ -46,13 +39,6 @@ public class Manager : MonoBehaviour
         deathText.text = string.Empty;
         Time.timeScale = 1;
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
     public void SnakeDie(Head.SnakeDieReason reason) {
         var highScore = PlayerPrefs.GetInt("HighScore", 0);
         if (head.score > highScore) {
@@ -110,14 +96,14 @@ public class Manager : MonoBehaviour
         else PrintToScreen(effectTexts[(int)type],content);
     }
 
-    public void PrintToScreen(TMP_Text text,string content, int time = 3) {
-        if (lEDHandler != null)
+    private void PrintToScreen(TMP_Text text,string content, int time = 3) {
+        if (ledHandler != null)
         {
-            StopCoroutine(lEDHandler);
-            lEDHandler = null;
+            StopCoroutine(ledHandler);
+            ledHandler = null;
         }
 
-        lEDHandler = StartCoroutine(PostLed(text, content, time));
+        ledHandler = StartCoroutine(PostLed(text, content, time));
     }
 
     private IEnumerator PostLed(TMP_Text text, string content, int time) {

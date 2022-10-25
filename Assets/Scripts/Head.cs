@@ -1,6 +1,6 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+// ReSharper disable Unity.InefficientPropertyAccess
 
 public class Head : MonoBehaviour
 {
@@ -19,7 +19,7 @@ public class Head : MonoBehaviour
         Length0, 
         PoopSnake
     };
-    private static System.Random _rng = new System.Random();
+    private static readonly System.Random Rng = new System.Random();
     private Vector2 now; // actual head direction
     private Vector2 next;
     private int angle;
@@ -30,21 +30,21 @@ public class Head : MonoBehaviour
     public GameObject poopPrefab;
     public GameObject food;
     private Vector3 tmp;
-    private bool poopCounting = false;
-    private int poopCount = 0;
+    private bool poopCounting;
+    private int poopCount;
     public int digestMoveNumber = 3;
     private int poopDamage = 1;
     private bool canInput = true;
     public float unitScale = 0.5f;
-    public float timer = 0f;
+    public float timer;
     public float defaultTimerGap = 0.1f;
-    private int speedlevel = 1;
+    private int speedLevel = 1;
     public int debuffTime = 1;
-    private bool lostControl = false;
-    private bool reverseInput = false;
-    private Coroutine lostControlHandler = null;
-    private Coroutine reverseInputHandler = null;
-    public int score = 0;
+    private bool lostControl;
+    private bool reverseInput;
+    private Coroutine lostControlHandler;
+    private Coroutine reverseInputHandler;
+    public int score;
 
     public void Start()
     {
@@ -157,7 +157,7 @@ public class Head : MonoBehaviour
         timer += Time.deltaTime;
 
 
-        if (timer > defaultTimerGap / speedlevel)
+        if (timer > defaultTimerGap / speedLevel)
         {
             MoveBody();
             canInput = true;
@@ -169,7 +169,7 @@ public class Head : MonoBehaviour
         Debug.Log("Enter: "+other.tag);
         if (other.tag.Equals("Food"))
         {
-            score += speedlevel;
+            score += speedLevel;
             Manager.manager.scoreText.text = $"Score: {score}";
             Manager.manager.PlayAudio(1);
             Destroy(food);
@@ -183,7 +183,7 @@ public class Head : MonoBehaviour
         if (other.tag.Equals("Poop"))
         {
             Destroy(other.gameObject);
-            var damageType = (PoopEffectType)_rng.Next(System.Enum.GetNames(typeof(PoopEffectType)).Length);
+            var damageType = (PoopEffectType)Rng.Next(System.Enum.GetNames(typeof(PoopEffectType)).Length);
             int option = 0;
             switch (damageType)
             {
@@ -218,8 +218,8 @@ public class Head : MonoBehaviour
                     }
                 case PoopEffectType.Speedup:
                     {
-                        speedlevel++;
-                        option = speedlevel;
+                        speedLevel++;
+                        option = speedLevel;
                         break;
                     }
             }
