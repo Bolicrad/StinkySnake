@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 public class GridPrinter : MonoBehaviour
@@ -9,15 +8,15 @@ public class GridPrinter : MonoBehaviour
     private static readonly Color SelectedColor = Color.blue;
     private static readonly Color AvailableColor = Color.green;
     public static GridPrinter gridPrinter;
+    public bool drawingAim;
+    public Vector2 aimPos;
     
     void OnPostRender()
     {
         DrawGrid();
         
-        //Draw Mouse Grid
-        // Vector2Int mousePos = GetMouseGridPos();
-        // if (Mathf.Abs(mousePos.x) > Manager.manager.gridMax.x || Mathf.Abs(mousePos.y) > Manager.manager.gridMax.y) return;
-        // DrawSquare(GridToWorldPoint(mousePos, Manager.manager.transform.position), OverlapColor);
+        
+        if(drawingAim)DrawSquare(aimPos, OverlapColor);
     }
     
     public static Vector2Int WorldToGridPoint(Vector2 worldPos, Vector2 center)

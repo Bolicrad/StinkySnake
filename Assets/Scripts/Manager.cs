@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,6 +11,7 @@ public class Manager : MonoBehaviour
     public static Manager manager;
     public GameObject headPrefab;
     public GameObject molePrefab;
+    public Transform moleParent;
     public BoxCollider2D border;
     public SpriteRenderer spriteRenderer;
     public TMP_Text deathText;
@@ -30,7 +32,6 @@ public class Manager : MonoBehaviour
         border.size = new Vector2(borderSize.y * 2 - 1.5f, borderSize.y * 2 - 1.5f);
         spriteRenderer.size = new Vector2(borderSize.y * 2 - 0.5f, borderSize.y * 2 - 0.5f);
         transform.position = new Vector3(borderSize.y - borderSize.x, 0);
-        
         gridMax = new Vector2Int(
             (int)(spriteRenderer.size.x / 0.5f) / 2,
             (int)(spriteRenderer.size.y / 0.5f) / 2);
@@ -57,7 +58,7 @@ public class Manager : MonoBehaviour
             Head.SnakeDieReason.HitSelf => "You ate your body.",
             Head.SnakeDieReason.HitWall => "You hit the boundary.",
             Head.SnakeDieReason.Length0 => "Your body fell into the void.",
-            Head.SnakeDieReason.PoopSnake => "The spirit of Poop ate you.",
+            Head.SnakeDieReason.PoopSnake => "Another Snake ate you.",
             _ => ""
         };
         scoreText.text = $"Score: {head.score} \nHigh Score: {highScore}";
@@ -65,6 +66,17 @@ public class Manager : MonoBehaviour
         PlayAudio(5);
         startButton.gameObject.SetActive(true);
         StartCoroutine(DeleteAllTail());
+        
+        //Destroy all moles
+        if (moleParent.childCount > 0)
+        {
+            for (int i = moleParent.childCount - 1; i >= 0; i--)
+            {
+                DestroyImmediate(moleParent.GetChild(i).gameObject);
+            }
+        }
+        
+        GridPrinter.gridPrinter.drawingAim = false;
         Destroy(head.food);
         head.gameObject.SetActive(false);
         foreach (var tmpText in effectTexts)
@@ -88,10 +100,10 @@ public class Manager : MonoBehaviour
                 PlayAudio(0);
                 break;
             case Head.PoopEffectType.LostControl:
-                isOption = true;
-                content += $"Lost Control for {option}s";
+                // isOption = true;
+                // content += $"Lost Control for {option}s";
                 PlayAudio(3);
-                break;
+                return;
             case Head.PoopEffectType.Speedup:
                 content += $"Speed Level Up to {option}";
                 PlayAudio(2);
@@ -133,7 +145,7 @@ public class Manager : MonoBehaviour
 
         var pos = GetUnoccupiedPos();
 
-        Instantiate(molePrefab, pos, Quaternion.identity);
+        Instantiate(molePrefab, pos, Quaternion.identity).transform.parent = moleParent;
     }
     public void CreateFood()
     {
@@ -151,12 +163,23 @@ public class Manager : MonoBehaviour
     {
         var fixedPos = GetRandomPos();
 
-        while (IsPosOccupied(fixedPos))
+        while (IsPosOccupied(fixedPos, out var col))
         {
+            if (col!= null) Debug.Log($"Occupied by {col.tag}");
             fixedPos = GetRandomPos();
         }
 
         return fixedPos;
+    }
+
+    public Vector2 GridToWorldPos(Vector2Int gridPos)
+    {
+        return GridPrinter.GridToWorldPoint(gridPos, transform.position);
+    }
+
+    public Vector2Int WorldToGridPoint(Vector2 pos)
+    {
+        return GridPrinter.WorldToGridPoint(pos, transform.position);
     }
 
     public Vector2 GetRandomPos()
@@ -165,15 +188,16 @@ public class Manager : MonoBehaviour
         return GridPrinter.GridToWorldPoint(gridPos, transform.position);
     }
 
-    public bool IsPosOccupied(Vector2 pos)
+    public bool IsPosOccupied(Vector2 pos, out Collider2D col)
     {
         // ReSharper disable once Unity.PreferNonAllocApi
+        col = null;
         var colliders = Physics2D.OverlapPointAll(pos);
         if (colliders.Length > 0)
         {
             foreach (Collider2D other in colliders)
             {
-                Debug.Log(other.tag);
+                col = other;
             }
             return true;
         }
@@ -189,9 +213,7 @@ public class Manager : MonoBehaviour
     {
         return Mathf.Abs(gridPos.x) <= gridMax.x && Mathf.Abs(gridPos.y) <= gridMax.y;
     }
-
-
-
+    
     public void PlayAudio(int index) {
         // audioSource.clip = audioClips[index];
         // audioSource.Play();

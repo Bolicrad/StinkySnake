@@ -35,13 +35,27 @@ public class Head : MonoBehaviour
     private int poopCount;
     public int digestMoveNumber = 3;
     private int poopDamage = 1;
+    private bool LostControl => LostControlSteps > 0;
+    private int lostControlPower = 3;
+    private int lostControlSteps;
+    private int LostControlSteps
+    {
+        get => lostControlSteps;
+        set
+        {
+            lostControlSteps = value;
+            Manager.manager.effectTexts[(int)PoopEffectType.LostControl].text =
+                value > 0 ? $"Lost Control for {value} steps" : "";
+        }
+    }
+
     private bool canInput = true;
     public float unitScale = 0.5f;
     public float timer;
     public float defaultTimerGap = 0.1f;
     private int speedLevel = 1;
     public int debuffTime = 1;
-    private bool lostControl;
+    
     private bool reverseInput;
     private Coroutine lostControlHandler;
     private Coroutine reverseInputHandler;
@@ -78,14 +92,7 @@ public class Head : MonoBehaviour
             RemoveBody();
         }
     }
-
-    private IEnumerator LostControlDebuff(int time)
-    {
-        lostControl = true;
-        yield return new WaitForSeconds(time);
-        lostControl = false;
-    }
-
+    
     private IEnumerator ReverseInputDebuff(int time)
     {
         reverseInput = true;
@@ -132,6 +139,12 @@ public class Head : MonoBehaviour
                 digesting = false;
             }
         }
+
+        if (LostControlSteps > 0)
+        {
+            LostControlSteps--;
+        }
+
         if (TailTransform)
         {
             TailTransform.position = tmp;
@@ -142,7 +155,7 @@ public class Head : MonoBehaviour
 
     private void Update()
     {
-        if (canInput && !lostControl)
+        if (canInput && !LostControl)
         {
             float input;
             if (now == Vector2Int.up || now == Vector2Int.down) {
@@ -167,7 +180,7 @@ public class Head : MonoBehaviour
 
         timer += Time.deltaTime;
         
-        if (timer > defaultTimerGap / speedLevel)
+        if (timer > defaultTimerGap / Mathf.Sqrt(speedLevel))
         {
             MoveBody();
             canInput = true;
@@ -216,13 +229,15 @@ public class Head : MonoBehaviour
                 }
                 case PoopEffectType.LostControl:
                 {
-                    option = debuffTime;
-                    if (lostControlHandler != null)
-                    {
-                        StopCoroutine(lostControlHandler);
-                        lostControlHandler = null;
-                    }
-                    lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
+                    LostControlSteps = lostControlPower;
+                    lostControlPower++;
+                    // option = debuffTime;
+                    // if (lostControlHandler != null)
+                    // {
+                    //     StopCoroutine(lostControlHandler);
+                    //     lostControlHandler = null;
+                    // }
+                    // lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
                     break;
                 }
                 case PoopEffectType.Speedup:
