@@ -33,7 +33,7 @@ public class Mole : MonoBehaviour
             {
                 yield return ControlFlow.ExecuteWhileRunning(
                     FindFood(targetFound => target = targetFound),
-                    (IEnumerable<Instruction>)Wander(dir, finalDir => dir = finalDir));
+                    Wander(dir, finalDir => dir = finalDir));
                 if (target != null)
                 {
                     yield return ControlFlow.Call(DashToTarget(target));
@@ -47,7 +47,7 @@ public class Mole : MonoBehaviour
         }
     }
 
-    IEnumerable<Instruction> FindFood(System.Action<Transform> targetFound)
+    IEnumerable<Instruction> FindFood(Action<Transform> targetFound)
     {
         GameObject foodObj = GameObject.FindWithTag("Food");
         while (foodObj!=null &&
@@ -63,7 +63,7 @@ public class Mole : MonoBehaviour
         if(foodObj!=null) targetFound(foodObj.transform);
     }
 
-    IEnumerable<Instruction> Wander(Vector2Int startDir, System.Action<Vector2Int> finalDir)
+    IEnumerable<Instruction> Wander(Vector2Int startDir, Action<Vector2Int> finalDir)
     {
         Vector2Int dir = startDir;
         try

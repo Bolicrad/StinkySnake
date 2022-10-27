@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -213,7 +212,26 @@ public class Manager : MonoBehaviour
     {
         return Mathf.Abs(gridPos.x) <= gridMax.x && Mathf.Abs(gridPos.y) <= gridMax.y;
     }
-    
+
+    public void Match3Poop(Vector2 pos)
+    {
+
+
+    }
+
+    public bool IsValidPoop(Vector2Int gridPos)
+    {
+        if (!IsGridPosInRange(gridPos)) return false;
+        if (IsPosOccupied(gridPos, out var col))
+        {
+            if (col.CompareTag("Poop"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void PlayAudio(int index) {
         // audioSource.clip = audioClips[index];
         // audioSource.Play();
