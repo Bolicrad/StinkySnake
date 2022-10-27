@@ -9,6 +9,7 @@ public class Manager : MonoBehaviour
 {
     public static Manager manager;
     public GameObject headPrefab;
+    public GameObject molePrefab;
     public BoxCollider2D border;
     public SpriteRenderer spriteRenderer;
     public TMP_Text deathText;
@@ -74,7 +75,7 @@ public class Manager : MonoBehaviour
     }
 
     public void TellPoopEffect(Head.PoopEffectType type,int option) {
-        string content = "Poop Effect: ";
+        string content = "";
         bool isOption = false;
         switch (type) {
             case Head.PoopEffectType.ReduceLength:
@@ -94,6 +95,9 @@ public class Manager : MonoBehaviour
             case Head.PoopEffectType.Speedup:
                 content += $"Speed Level Up to {option}";
                 PlayAudio(2);
+                break;
+            case Head.PoopEffectType.CreateMole:
+                content += $"Summoned a mole.";
                 break;
         }
         if(isOption)PrintToScreen(effectTexts[(int)type],content,option);
@@ -123,22 +127,36 @@ public class Manager : MonoBehaviour
             yield return null;
         }
     }
-    
+    public void CreateMole()
+    {
+        //Find a proper place to instantiate a mole.
+
+        var pos = GetUnoccupiedPos();
+
+        Instantiate(molePrefab, pos, Quaternion.identity);
+    }
     public void CreateFood()
     {
 
+        var pos = GetUnoccupiedPos();
+        
+        if (!head.food)
+        {
+            head.food = Instantiate(head.foodPrefab, pos, Quaternion.identity);
+        }
+        else head.food.transform.position = pos;
+    }
+
+    public Vector2 GetUnoccupiedPos()
+    {
         var fixedPos = GetRandomPos();
 
         while (IsPosOccupied(fixedPos))
         {
             fixedPos = GetRandomPos();
         }
-        
-        if (!head.food)
-        {
-            head.food = Instantiate(head.foodPrefab, fixedPos, Quaternion.identity);
-        }
-        else head.food.transform.position = fixedPos;
+
+        return fixedPos;
     }
 
     public Vector2 GetRandomPos()
@@ -161,6 +179,18 @@ public class Manager : MonoBehaviour
         }
         return false;
     }
+
+    public bool IsPosInRange(Vector2 pos)
+    {
+        return IsGridPosInRange(GridPrinter.WorldToGridPoint(pos, transform.position));
+    }
+
+    public bool IsGridPosInRange(Vector2Int gridPos)
+    {
+        return Mathf.Abs(gridPos.x) <= gridMax.x && Mathf.Abs(gridPos.y) <= gridMax.y;
+    }
+
+
 
     public void PlayAudio(int index) {
         // audioSource.clip = audioClips[index];

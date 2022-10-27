@@ -8,15 +8,16 @@ public class GridPrinter : MonoBehaviour
     private static readonly Color OverlapColor = Color.red;
     private static readonly Color SelectedColor = Color.blue;
     private static readonly Color AvailableColor = Color.green;
+    public static GridPrinter gridPrinter;
     
     void OnPostRender()
     {
         DrawGrid();
         
         //Draw Mouse Grid
-        Vector2Int mousePos = GetMouseGridPos();
-        if (Mathf.Abs(mousePos.x) > Manager.manager.gridMax.x || Mathf.Abs(mousePos.y) > Manager.manager.gridMax.y) return;
-        DrawSquare(GridToWorldPoint(mousePos, Manager.manager.transform.position), OverlapColor);
+        // Vector2Int mousePos = GetMouseGridPos();
+        // if (Mathf.Abs(mousePos.x) > Manager.manager.gridMax.x || Mathf.Abs(mousePos.y) > Manager.manager.gridMax.y) return;
+        // DrawSquare(GridToWorldPoint(mousePos, Manager.manager.transform.position), OverlapColor);
     }
     
     public static Vector2Int WorldToGridPoint(Vector2 worldPos, Vector2 center)
@@ -70,7 +71,7 @@ public class GridPrinter : MonoBehaviour
         DrawLine(rightDown, rightUp, color);
     }
     
-    void DrawSquare(Vector2 center, Color color)
+    public void DrawSquare(Vector2 center, Color color)
     {
         DrawSquare(center, 0.5f, 0.5f, color);
     }
@@ -104,17 +105,17 @@ public class GridPrinter : MonoBehaviour
         }
     }
 
-    private void Start()
+    private void Awake()
     {
-
+        gridPrinter = this;
     }
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Debug.Log(GetMouseGridPos());
-        }
+        // if (Input.GetMouseButtonDown(0))
+        // {
+        //     Debug.Log(GetMouseGridPos());
+        // }
     }
     
 }

@@ -9,7 +9,8 @@ public class Head : MonoBehaviour
         ReduceLength,
         ReverseInput,
         LostControl,
-        Speedup
+        Speedup,
+        CreateMole,
     }
 
     public enum SnakeDieReason
@@ -20,11 +21,11 @@ public class Head : MonoBehaviour
         PoopSnake
     };
     private static readonly System.Random Rng = new System.Random();
-    private Vector2 now; // actual head direction
-    private Vector2 next;
+    private Vector2Int now; // actual head direction
     private int angle;
     private Transform TailTransform => bodyParent.childCount > 0 ? bodyParent.GetChild(bodyParent.childCount - 1) : null;
     public Transform bodyParent;
+    public Transform poopParent;
     public GameObject bodyPrefab;
     public GameObject foodPrefab;
     public GameObject poopPrefab;
@@ -48,19 +49,19 @@ public class Head : MonoBehaviour
 
     public void Start()
     {
+        poopParent = GameObject.Find("PoopParent").transform;
         for (var i = 0; i < 3; ++i)
         {
             CreateBody(transform.position - (i + 1) * new Vector3(0, unitScale, 0));
         }
-        now = Vector2.up;
-        next = Vector2.up;
+        now = Vector2Int.up;
         angle = 0;
         Manager.manager.CreateFood();
     }
     
     private void CreatePoop(Vector3 position)
     {
-        Instantiate(poopPrefab, position, Quaternion.identity);
+        Instantiate(poopPrefab, position, Quaternion.identity).transform.parent = poopParent;
     }
 
     private void CreateBody(Vector3 position)
@@ -108,8 +109,16 @@ public class Head : MonoBehaviour
     private void MoveBody()
     {
         tmp = transform.position;
+        Vector2 nextPos = unitScale * (Vector2)now + (Vector2)transform.position;
         
-        transform.position = unitScale * now + (Vector2)transform.position;
+        //Judge If the snake run out of the range (if so die with the hit wall reason)
+        if (!Manager.manager.IsPosInRange(nextPos))
+        {
+            Manager.manager.SnakeDie(SnakeDieReason.HitWall);
+            return;
+        }
+
+        transform.position = nextPos;
 
         if (digesting)
         {
@@ -136,18 +145,20 @@ public class Head : MonoBehaviour
         if (canInput && !lostControl)
         {
             float input;
-            if (now == Vector2.up || now == Vector2.down) {
+            if (now == Vector2Int.up || now == Vector2Int.down) {
                 input = Input.GetAxis("Horizontal");
-                if (Mathf.Abs(input) > 0) {
-                    now = (reverseInput?input<0:input>0) ? Vector2.right : Vector2.left;
+                if (Mathf.Abs(input) > 0)
+                {
+                    now = (reverseInput ? input < 0 : input > 0) ? Vector2Int.right : Vector2Int.left;
                     angle = (reverseInput ? input < 0 : input > 0) ? -90 : 90;
                     canInput = false;
                 }
             }
-            if (now == Vector2.left || now == Vector2.right) {
+            if (now == Vector2Int.left || now == Vector2Int.right) {
                 input = Input.GetAxis("Vertical");
-                if (Mathf.Abs(input) > 0) {
-                    now = (reverseInput ? input < 0 : input > 0) ? Vector2.up : Vector2.down;
+                if (Mathf.Abs(input) > 0)
+                {
+                    now = (reverseInput ? input < 0 : input > 0) ? Vector2Int.up : Vector2Int.down;
                     angle = (reverseInput ? input < 0 : input > 0) ? 0 : 180;
                     canInput = false;
                 }
@@ -155,8 +166,7 @@ public class Head : MonoBehaviour
         }
 
         timer += Time.deltaTime;
-
-
+        
         if (timer > defaultTimerGap / speedLevel)
         {
             MoveBody();
@@ -166,7 +176,6 @@ public class Head : MonoBehaviour
     }
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log("Enter: "+other.tag);
         if (other.tag.Equals("Food"))
         {
             score += speedLevel;
@@ -188,40 +197,45 @@ public class Head : MonoBehaviour
             switch (damageType)
             {
                 case PoopEffectType.ReduceLength:
-                    {
-                        option = poopDamage;
-                        StartCoroutine(DeleteBody(poopDamage));
-                        poopDamage++;
-                        break;
-                    }
+                {
+                    option = poopDamage;
+                    StartCoroutine(DeleteBody(poopDamage));
+                    poopDamage++;
+                    break;
+                }
                 case PoopEffectType.ReverseInput:
+                {
+                    option = debuffTime;
+                    if (reverseInputHandler != null)
                     {
-                        option = debuffTime;
-                        if (reverseInputHandler != null)
-                        {
-                            StopCoroutine(reverseInputHandler);
-                            reverseInputHandler = null;
-                        }
-                        reverseInputHandler = StartCoroutine(ReverseInputDebuff(debuffTime));
-                        break;
+                        StopCoroutine(reverseInputHandler);
+                        reverseInputHandler = null;
                     }
+                    reverseInputHandler = StartCoroutine(ReverseInputDebuff(debuffTime));
+                    break;
+                }
                 case PoopEffectType.LostControl:
+                {
+                    option = debuffTime;
+                    if (lostControlHandler != null)
                     {
-                        option = debuffTime;
-                        if (lostControlHandler != null)
-                        {
-                            StopCoroutine(lostControlHandler);
-                            lostControlHandler = null;
-                        }
-                        lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
-                        break;
+                        StopCoroutine(lostControlHandler);
+                        lostControlHandler = null;
                     }
+                    lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
+                    break;
+                }
                 case PoopEffectType.Speedup:
-                    {
-                        speedLevel++;
-                        option = speedLevel;
-                        break;
-                    }
+                {
+                    speedLevel++;
+                    option = speedLevel;
+                    break;
+                }
+                case PoopEffectType.CreateMole:
+                {
+                    Manager.manager.CreateMole();
+                    break;
+                }
             }
             Manager.manager.TellPoopEffect(damageType, option);
         }
@@ -229,15 +243,6 @@ public class Head : MonoBehaviour
         if (other.tag.Equals("Body"))
         {
             Manager.manager.SnakeDie(SnakeDieReason.HitSelf);
-        }
-    }
-
-    private void OnTriggerExit2D(Collider2D other)
-    {
-        Debug.Log("Exit: "+other.tag);
-        if (other.tag.Equals("Boundary")&&transform.gameObject.activeInHierarchy)
-        {
-            Manager.manager.SnakeDie(SnakeDieReason.HitWall);
         }
     }
 }
