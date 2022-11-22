@@ -1,8 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Pool;
 using UnityEngine.UI;
 // ReSharper disable Unity.InefficientPropertyAccess
 
@@ -15,10 +15,15 @@ public class Manager : MonoBehaviour
     public BoxCollider2D border;
     public SpriteRenderer spriteRenderer;
     public TMP_Text deathText;
-    public List<TMP_Text> effectTexts;
+    
+    public RectTransform content;
+    public ObjectPool<GameObject> textPool;
+    public GameObject textPrefab;
+    
     public TMP_Text scoreText;
     public Button startButton;
-    [DoNotSerialize]public Head head;
+    
+    public Head head;
     private Vector3 borderSize;
     public AudioClip[] audioClips;
     public List<StepCommand> realPoopCommands;
@@ -37,14 +42,89 @@ public class Manager : MonoBehaviour
             (int)(spriteRenderer.size.x / 0.5f) / 2,
             (int)(spriteRenderer.size.y / 0.5f) / 2);
         realPoopCommands = new List<StepCommand>();
+        textPool = new ObjectPool<GameObject>(CreateText, OnGetText, OnReleaseText, OnDestroyText, true, 5, 20);
     }
+
+    #region TextPooling
+
+    private void OnDestroyText(GameObject obj)
+    {
+        //Do nothing
+    }
+
+    private void OnReleaseText(GameObject obj)
+    {
+        obj.GetComponent<TMP_Text>().text = "";
+        obj.transform.SetParent(null);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+    }
+
+    private void OnGetText(GameObject obj)
+    {
+        obj.transform.SetParent(content);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+    }
+
+    private GameObject CreateText()
+    {
+        return Instantiate(textPrefab);
+    }
+
+    #endregion
+
+    #region Text Print
+
+    public void TellPoopEffect(Head.PoopEffectType type,int option) {
+        string textContent = "";
+        bool isOption = false;
+        switch (type) {
+            case Head.PoopEffectType.ReduceLength:
+                textContent += $"Reduced your length by {option}.";
+                PlayAudio(4);
+                break;
+            case Head.PoopEffectType.ReverseInput:
+                isOption = true;
+                textContent += $"Input Axis reversed for {option}s";
+                PlayAudio(0);
+                break;
+            case Head.PoopEffectType.LostControl:
+                // isOption = true;
+                // content += $"Lost Control for {option}s";
+                PlayAudio(3);
+                return;
+            case Head.PoopEffectType.Speedup:
+                textContent += $"Speed Level Up to {option}";
+                PlayAudio(2);
+                break;
+            case Head.PoopEffectType.CreateMole:
+                textContent += $"Summoned a mole.";
+                break;
+        }
+        if(isOption)PrintToScreen(textPool.Get().GetComponent<TMP_Text>(),textContent,option);
+        else PrintToScreen(textPool.Get().GetComponent<TMP_Text>(),textContent);
+    }
+
+    private void PrintToScreen(TMP_Text text,string textContent, int time = 3) {
+        StartCoroutine(PostLed(text, textContent, time));
+    }
+
+    private IEnumerator PostLed(TMP_Text text, string textContent, int time) {
+
+        text.text = textContent;
+        yield return new WaitForSeconds(time);
+        textPool.Release(text.gameObject);
+    }
+
+    #endregion
+
+    #region Game Life Cycle
 
     public void StartGame() {
         head = Instantiate(headPrefab).GetComponent<Head>();
         head.transform.position = transform.position;
         head.bodyParent = transform;
         startButton.gameObject.SetActive(false);
-        deathText.text = string.Empty;
+        deathText.text = "Poop Effects:";
         Time.timeScale = 1;
     }
     public void SnakeDie(Head.SnakeDieReason reason) {
@@ -67,6 +147,7 @@ public class Manager : MonoBehaviour
         deathText.text = text;
         PlayAudio(5);
         startButton.gameObject.SetActive(true);
+        StopAllCoroutines();
         StartCoroutine(DeleteAllTail());
         
         //Destroy all moles
@@ -79,65 +160,25 @@ public class Manager : MonoBehaviour
         }
         
         GridPrinter.gridPrinter.drawingAim = false;
+        
         Destroy(head.food);
         head.gameObject.SetActive(false);
+        
         foreach (var command in realPoopCommands)
         {
             command.executed = true;
         }
-        foreach (var tmpText in effectTexts)
+        foreach (var tmpText in content.GetComponentsInChildren<TMP_Text>())
         {
-            tmpText.text = string.Empty;
+            textPool.Release(tmpText.gameObject);
         }
+        
         Destroy(head.gameObject);
     }
 
-    public void TellPoopEffect(Head.PoopEffectType type,int option) {
-        string content = "";
-        bool isOption = false;
-        switch (type) {
-            case Head.PoopEffectType.ReduceLength:
-                content += $"Reduced your length by {option}.";
-                PlayAudio(4);
-                break;
-            case Head.PoopEffectType.ReverseInput:
-                isOption = true;
-                content += $"Input Axis reversed for {option}s";
-                PlayAudio(0);
-                break;
-            case Head.PoopEffectType.LostControl:
-                // isOption = true;
-                // content += $"Lost Control for {option}s";
-                PlayAudio(3);
-                return;
-            case Head.PoopEffectType.Speedup:
-                content += $"Speed Level Up to {option}";
-                PlayAudio(2);
-                break;
-            case Head.PoopEffectType.CreateMole:
-                content += $"Summoned a mole.";
-                break;
-        }
-        if(isOption)PrintToScreen(effectTexts[(int)type],content,option);
-        else PrintToScreen(effectTexts[(int)type],content);
-    }
+    #endregion
 
-    private void PrintToScreen(TMP_Text text,string content, int time = 3) {
-        if (ledHandler != null)
-        {
-            StopCoroutine(ledHandler);
-            ledHandler = null;
-        }
-
-        ledHandler = StartCoroutine(PostLed(text, content, time));
-    }
-
-    private IEnumerator PostLed(TMP_Text text, string content, int time) {
-
-        text.text = content;
-        yield return new WaitForSeconds(time);
-        text.text = "";
-    }
+    #region Create/Destroy
 
     IEnumerator DeleteAllTail() {
         while (transform.childCount > 0) {
@@ -164,6 +205,10 @@ public class Manager : MonoBehaviour
         }
         else head.food.transform.position = pos;
     }
+
+    #endregion
+
+    #region Grid Management
 
     public Vector2 GetUnoccupiedPos()
     {
@@ -220,12 +265,16 @@ public class Manager : MonoBehaviour
         return Mathf.Abs(gridPos.x) <= gridMax.x && Mathf.Abs(gridPos.y) <= gridMax.y;
     }
 
+    #endregion
+    
+    #region Todo: Match3 Poop Snake Generation
+
     public void Match3Poop(Vector2 pos)
     {
 
 
     }
-
+    
     public bool IsValidPoop(Vector2Int gridPos)
     {
         if (!IsGridPosInRange(gridPos)) return false;
@@ -239,6 +288,9 @@ public class Manager : MonoBehaviour
         return false;
     }
 
+    #endregion
+
+    
     public void PlayAudio(int index) {
         // audioSource.clip = audioClips[index];
         // audioSource.Play();

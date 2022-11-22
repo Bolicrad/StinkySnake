@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 
 // ReSharper disable Unity.InefficientPropertyAccess
@@ -38,10 +37,10 @@ public class Head : MonoBehaviour
     private bool digesting;
     private int poopCount;
 
-    private int DigestMoveNumber => 1 + (bodyParent.childCount / speedLevel) / 3;
+    private int DigestMoveNumber => 2 + (bodyParent.childCount / speedLevel) / 4;
 
     private int poopDamage = 1;
-    [DoNotSerialize]public bool lostControl;
+    public bool lostControl;
     private int lostControlPower = 3;
 
     private bool canInput = true;
@@ -276,7 +275,7 @@ public class Head : MonoBehaviour
         }
     }
 
-    private void AddStepCommand<T>(int step) where T: StepCommand, new()
+    private static void AddStepCommand<T>(int step) where T: StepCommand, new()
     {
         var newCommand = PoopCommands.FirstOrDefault(poopCommand => poopCommand.executed && poopCommand.GetType() == typeof(T));
         if (newCommand == null)
