@@ -20,6 +20,7 @@ public class Manager : MonoBehaviour
     private Head head;
     private Vector3 borderSize;
     public AudioClip[] audioClips;
+    public List<StepCommand> realPoopCommands;
     public AudioSource audioSource;
     private Coroutine ledHandler;
     public Vector2Int gridMax;
@@ -34,6 +35,7 @@ public class Manager : MonoBehaviour
         gridMax = new Vector2Int(
             (int)(spriteRenderer.size.x / 0.5f) / 2,
             (int)(spriteRenderer.size.y / 0.5f) / 2);
+        realPoopCommands = new List<StepCommand>();
     }
 
     public void StartGame() {
@@ -78,6 +80,10 @@ public class Manager : MonoBehaviour
         GridPrinter.gridPrinter.drawingAim = false;
         Destroy(head.food);
         head.gameObject.SetActive(false);
+        foreach (var command in realPoopCommands)
+        {
+            command.executed = true;
+        }
         foreach (var tmpText in effectTexts)
         {
             tmpText.text = string.Empty;

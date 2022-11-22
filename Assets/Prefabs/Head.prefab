@@ -100,11 +100,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bodyParent: {fileID: 0}
+  poopParent: {fileID: 0}
   bodyPrefab: {fileID: 3021192735858863081, guid: 4fd9de414c4364351b60b8cccb70388e, type: 3}
   foodPrefab: {fileID: 3021192735858863081, guid: 20cbe9d70c5f748edb39a8522b9b1bd5, type: 3}
   poopPrefab: {fileID: 3021192735858863081, guid: 830c0c1e8092d4a3bba31f844030c94d, type: 3}
   food: {fileID: 0}
-  digestMoveNumber: 2
+  digestMoveNumber: 5
   unitScale: 0.5
   timer: 0
   defaultTimerGap: 0.3

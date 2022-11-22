@@ -1,5 +1,9 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+
 // ReSharper disable Unity.InefficientPropertyAccess
 
 public class Head : MonoBehaviour
@@ -33,7 +37,9 @@ public class Head : MonoBehaviour
     private Vector3 tmp;
     private bool digesting;
     private int poopCount;
-    public int digestMoveNumber = 3;
+
+    private int DigestMoveNumber => 1 + (bodyParent.childCount / speedLevel) / 3;
+
     private int poopDamage = 1;
     private bool LostControl => LostControlSteps > 0;
     private int lostControlPower = 3;
@@ -61,6 +67,8 @@ public class Head : MonoBehaviour
     private Coroutine reverseInputHandler;
     public int score;
 
+    private static List<StepCommand> PoopCommands => Manager.manager.realPoopCommands;
+
     public void Start()
     {
         poopParent = GameObject.Find("PoopParent").transform;
@@ -76,6 +84,12 @@ public class Head : MonoBehaviour
     private void CreatePoop(Vector3 position)
     {
         Instantiate(poopPrefab, position, Quaternion.identity).transform.parent = poopParent;
+    }
+
+    public void CreatePoop()
+    {
+        var position = TailTransform ? TailTransform.position : transform.position - (Vector3)(Vector2)now * unitScale;
+        CreatePoop(position);
     }
 
     private void CreateBody(Vector3 position)
@@ -110,7 +124,6 @@ public class Head : MonoBehaviour
         {
             Manager.manager.SnakeDie(SnakeDieReason.Length0);
         }
-
     }
 
     private void MoveBody()
@@ -127,19 +140,27 @@ public class Head : MonoBehaviour
 
         transform.position = nextPos;
 
-        if (digesting)
+        //Poop Logics
+        foreach (var poopCommand in PoopCommands.Where(poopCommand => !poopCommand.executed))
         {
-            if (poopCount > 0)
-            {
-                poopCount--;
-            }
-            else
-            {
-                CreatePoop(TailTransform ? TailTransform.position : tmp);
-                digesting = false;
-            }
+            poopCommand.Step();
         }
+        
+        // if (digesting)
+        // {
+        //     if (poopCount > 0)
+        //     {
+        //         poopCount--;
+        //     }
+        //     else
+        //     {
+        //         CreatePoop(TailTransform ? TailTransform.position : tmp);
+        //         digesting = false;
+        //     }
+        // }
+        
 
+        
         if (LostControlSteps > 0)
         {
             LostControlSteps--;
@@ -194,14 +215,28 @@ public class Head : MonoBehaviour
             score += speedLevel;
             Manager.manager.scoreText.text = $"Score: {score}";
             Manager.manager.PlayAudio(1);
+            
             Destroy(food);
             food = null;
-            CreateBody(TailTransform ? TailTransform.position : transform.position);
-            digesting = true;
-            poopCount = digestMoveNumber;
+            
+            //Create a new body
+            CreateBody(TailTransform ? TailTransform.position : transform.position - (Vector3)(Vector2)now * unitScale);
+            
+            //Set up a poop command
+            // digesting = true;
+            // poopCount = digestMoveNumber;
+            
+            var newCommand = PoopCommands.FirstOrDefault(poopCommand => poopCommand.executed);
+            if (newCommand == null)
+            {
+                newCommand = new CmdCreatePoop(this);
+                PoopCommands.Add(newCommand);
+            }
+            newCommand.Init(DigestMoveNumber); //Create a poop after 
+            Debug.Log($"Poop Command Cache Count: {PoopCommands.Count}");
+
             Manager.manager.CreateFood();
         }
-
         if (other.tag.Equals("Poop"))
         {
             Destroy(other.gameObject);
@@ -231,13 +266,17 @@ public class Head : MonoBehaviour
                 {
                     LostControlSteps = lostControlPower;
                     lostControlPower++;
-                    // option = debuffTime;
-                    // if (lostControlHandler != null)
-                    // {
-                    //     StopCoroutine(lostControlHandler);
-                    //     lostControlHandler = null;
-                    // }
-                    // lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
+    
+                    //legacy version
+                    {
+                        // option = debuffTime;
+                        // if (lostControlHandler != null)
+                        // {
+                        //     StopCoroutine(lostControlHandler);
+                        //     lostControlHandler = null;
+                        // }
+                        // lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
+                    }
                     break;
                 }
                 case PoopEffectType.Speedup:
@@ -254,10 +293,10 @@ public class Head : MonoBehaviour
             }
             Manager.manager.TellPoopEffect(damageType, option);
         }
-
         if (other.tag.Equals("Body"))
         {
             Manager.manager.SnakeDie(SnakeDieReason.HitSelf);
         }
     }
+    
 }

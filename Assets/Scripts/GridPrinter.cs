@@ -14,8 +14,6 @@ public class GridPrinter : MonoBehaviour
     void OnPostRender()
     {
         DrawGrid();
-        
-        
         if(drawingAim)DrawSquare(aimPos, OverlapColor);
     }
     
