@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 // ReSharper disable Unity.InefficientPropertyAccess
@@ -17,7 +18,7 @@ public class Manager : MonoBehaviour
     public List<TMP_Text> effectTexts;
     public TMP_Text scoreText;
     public Button startButton;
-    private Head head;
+    [DoNotSerialize]public Head head;
     private Vector3 borderSize;
     public AudioClip[] audioClips;
     public List<StepCommand> realPoopCommands;

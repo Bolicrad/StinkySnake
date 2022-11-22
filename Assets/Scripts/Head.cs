@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor.Experimental.GraphView;
+using Unity.VisualScripting;
 using UnityEngine;
 
 // ReSharper disable Unity.InefficientPropertyAccess
@@ -41,19 +41,8 @@ public class Head : MonoBehaviour
     private int DigestMoveNumber => 1 + (bodyParent.childCount / speedLevel) / 3;
 
     private int poopDamage = 1;
-    private bool LostControl => LostControlSteps > 0;
+    [DoNotSerialize]public bool lostControl;
     private int lostControlPower = 3;
-    private int lostControlSteps;
-    private int LostControlSteps
-    {
-        get => lostControlSteps;
-        set
-        {
-            lostControlSteps = value;
-            Manager.manager.effectTexts[(int)PoopEffectType.LostControl].text =
-                value > 0 ? $"Lost Control for {value} steps" : "";
-        }
-    }
 
     private bool canInput = true;
     public float unitScale = 0.5f;
@@ -140,7 +129,7 @@ public class Head : MonoBehaviour
 
         transform.position = nextPos;
 
-        //Poop Logics
+        //Step Command Logics
         foreach (var poopCommand in PoopCommands.Where(poopCommand => !poopCommand.executed))
         {
             poopCommand.Step();
@@ -160,12 +149,6 @@ public class Head : MonoBehaviour
         // }
         
 
-        
-        if (LostControlSteps > 0)
-        {
-            LostControlSteps--;
-        }
-
         if (TailTransform)
         {
             TailTransform.position = tmp;
@@ -176,7 +159,7 @@ public class Head : MonoBehaviour
 
     private void Update()
     {
-        if (canInput && !LostControl)
+        if (canInput && !lostControl)
         {
             float input;
             if (now == Vector2Int.up || now == Vector2Int.down) {
@@ -225,15 +208,8 @@ public class Head : MonoBehaviour
             //Set up a poop command
             // digesting = true;
             // poopCount = digestMoveNumber;
-            
-            var newCommand = PoopCommands.FirstOrDefault(poopCommand => poopCommand.executed);
-            if (newCommand == null)
-            {
-                newCommand = new CmdCreatePoop(this);
-                PoopCommands.Add(newCommand);
-            }
-            newCommand.Init(DigestMoveNumber); //Create a poop after 
-            Debug.Log($"Poop Command Cache Count: {PoopCommands.Count}");
+
+            AddStepCommand<CmdCreatePoop>(DigestMoveNumber);
 
             Manager.manager.CreateFood();
         }
@@ -264,7 +240,8 @@ public class Head : MonoBehaviour
                 }
                 case PoopEffectType.LostControl:
                 {
-                    LostControlSteps = lostControlPower;
+                    lostControl = true;
+                    AddStepCommand<CmdLostControl>(lostControlPower);
                     lostControlPower++;
     
                     //legacy version
@@ -298,5 +275,16 @@ public class Head : MonoBehaviour
             Manager.manager.SnakeDie(SnakeDieReason.HitSelf);
         }
     }
-    
+
+    private void AddStepCommand<T>(int step) where T: StepCommand, new()
+    {
+        var newCommand = PoopCommands.FirstOrDefault(poopCommand => poopCommand.executed && poopCommand.GetType() == typeof(T));
+        if (newCommand == null)
+        {
+            newCommand = new T();
+            PoopCommands.Add(newCommand);
+        }
+        newCommand.Init(step);
+    }
+
 }
