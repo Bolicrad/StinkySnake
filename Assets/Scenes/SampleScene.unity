@@ -206,7 +206,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 904355079}
   m_HandleRect: {fileID: 904355078}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -285,7 +285,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 306.25488}
+  m_AnchoredPosition: {x: 0, y: 306.255}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &277310007
@@ -453,7 +453,7 @@ RectTransform:
   m_Children:
   - {fileID: 1957590403}
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -807,7 +807,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &848732464
 GameObject:
@@ -1421,11 +1421,17 @@ MonoBehaviour:
   headPrefab: {fileID: 8929170445809093164, guid: e8344d1ac038249a292bec3503d98345, type: 3}
   molePrefab: {fileID: 8348774844377180365, guid: 372554f0bc3254a23ad6552d9ad405ca, type: 3}
   moleParent: {fileID: 337204106}
+  bodyPrefab: {fileID: 3021192735858863081, guid: 4fd9de414c4364351b60b8cccb70388e, type: 3}
+  bodyParent: {fileID: 1260629173}
+  poopPrefab: {fileID: 3021192735858863081, guid: 830c0c1e8092d4a3bba31f844030c94d, type: 3}
+  poopParent: {fileID: 1759395152}
+  foodPrefab: {fileID: 3021192735858863081, guid: 20cbe9d70c5f748edb39a8522b9b1bd5, type: 3}
   border: {fileID: 1260629174}
   spriteRenderer: {fileID: 1260629177}
   deathText: {fileID: 1067714281}
   content: {fileID: 277310006}
   textPrefab: {fileID: 2966274720668184686, guid: 0840ce6e54db04990b7483a5e33c7e7a, type: 3}
+  recycleBin: {fileID: 1714152175}
   scoreText: {fileID: 792192173}
   startButton: {fileID: 848732466}
   head: {fileID: 0}
@@ -1721,6 +1727,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1356734695}
   m_CullTransparentMesh: 1
+--- !u!1 &1714152174
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1714152175}
+  m_Layer: 0
+  m_Name: RecycleBin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1714152175
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1714152174}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -200, y: -200, z: -200}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1759395151
 GameObject:
   m_ObjectHideFlags: 0

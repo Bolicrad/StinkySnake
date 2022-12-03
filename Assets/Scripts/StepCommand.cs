@@ -1,23 +1,22 @@
-using TMPro;
 using UnityEngine;
 
-public class StepCommand
+public class StepCommand:MyCommand
 {
     protected int stepRemain;
-    protected Head commander;
-    public bool executed;
-
-    protected StepCommand()
+    
+    public static bool CheckDuplicate()
     {
-        commander = Manager.manager.head;
+        return true;
     }
-
+    
     public void Init(int step)
     {
-        commander = Manager.manager.head;
-        stepRemain = step;
-        executed = false;
         OnInit();
+        stepRemain = step;
+    }
+    public void Reset(int step)
+    {
+        stepRemain = step;
     }
     
     public void Step()
@@ -26,22 +25,11 @@ public class StepCommand
         if (stepRemain <= 0)
         {
             Execute();
-            executed = true;
         }
         else OnStep();
     }
-
-    protected virtual void OnInit()
-    {
-        
-    }
-
+    
     protected virtual void OnStep()
-    {
-        //Do nothing
-    }
-
-    protected virtual void Execute()
     {
         //Do nothing
     }
@@ -50,14 +38,18 @@ public class StepCommand
 
 public class CmdCreatePoop : StepCommand
 {
-    private TMP_Text tmpText;
+    public new static bool CheckDuplicate()
+    {
+        return true;
+    }
 
     protected override void OnInit()
     {
-        tmpText = Manager.manager.textPool.Get().GetComponent<TMP_Text>();
+        base.OnInit();
+        Manager.manager.PlayAudio(1);
         OnStep();
     }
-    
+
     protected override void OnStep()
     {
         tmpText.text = stepRemain > 0 ? $"Digesting. {stepRemain} steps to shit" : "";
@@ -67,28 +59,30 @@ public class CmdCreatePoop : StepCommand
     {
         Debug.Log($"Step Command Executed: CreatePoop");
         commander.CreatePoop();
-        Manager.manager.textPool.Release(tmpText.gameObject);
+        base.Execute();
     }
 }
 
 public class CmdLostControl : StepCommand
 {
-    private TMP_Text tmpText;
     protected override void OnInit()
     {
-        tmpText = Manager.manager.textPool.Get().GetComponent<TMP_Text>();
+        base.OnInit();
+        commander.lostControl = true;
+        Manager.manager.PlayAudio(3);
         OnStep();
     }
 
     protected override void OnStep()
     {
+        if (commander.lostControl == false) commander.lostControl = true;
         tmpText.text = stepRemain > 0 ? $"Lost Control for {stepRemain} steps" : "";
     }
 
     protected override void Execute()
     {
-        Debug.Log("Step Command Executed: Stop Lost Control");
+        Debug.Log("Step Command Executed: Stop Losing Control");
         commander.lostControl = false;
-        Manager.manager.textPool.Release(tmpText.gameObject);
+        base.Execute();
     }
 }

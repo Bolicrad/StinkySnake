@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,40 +27,41 @@ public class Head : MonoBehaviour
     private static readonly System.Random Rng = new System.Random();
     private Vector2Int now; // actual head direction
     private int angle;
-    private Transform TailTransform => bodyParent.childCount > 0 ? bodyParent.GetChild(bodyParent.childCount - 1) : null;
-    public Transform bodyParent;
-    public Transform poopParent;
-    public GameObject bodyPrefab;
-    public GameObject foodPrefab;
-    public GameObject poopPrefab;
+    private static Transform TailTransform => BodyParent.childCount > 0 ? BodyParent.GetChild(BodyParent.childCount - 1) : null;
+    private static Transform BodyParent => Manager.manager.bodyParent;
+    private static Transform PoopParent => Manager.manager.poopParent;
+    
     public GameObject food;
     private Vector3 tmp;
     private bool digesting;
     private int poopCount;
 
-    private int DigestMoveNumber => 2 + (bodyParent.childCount / speedLevel) / 4;
+    private int DigestMoveNumber => 2 + (BodyParent.childCount / speedLevel) / 4;
 
-    private int poopDamage = 1;
+    private int reduceLengthAmount = 1;
+    
     public bool lostControl;
     private int lostControlPower = 3;
-
+    
+    public bool reverseInput;
+    private int reverseTime = 3;
+    
     private bool canInput = true;
     public float unitScale = 0.5f;
-    public float timer;
+    private float timer;
     public float defaultTimerGap = 0.1f;
     private int speedLevel = 1;
-    public int debuffTime = 1;
     
-    private bool reverseInput;
-    private Coroutine lostControlHandler;
-    private Coroutine reverseInputHandler;
+
+    //private Coroutine lostControlHandler;
+    //private Coroutine reverseInputHandler;
     public int score;
 
-    private static List<StepCommand> PoopCommands => Manager.manager.realPoopCommands;
+    private static List<StepCommand> StepCommands => Manager.manager.realStepCommands;
+    private static List<TimerCommand> TimerCommands => Manager.manager.realTimerCommands;
 
     public void Start()
     {
-        poopParent = GameObject.Find("PoopParent").transform;
         for (var i = 0; i < 3; ++i)
         {
             CreateBody(transform.position - (i + 1) * new Vector3(0, unitScale, 0));
@@ -71,7 +73,7 @@ public class Head : MonoBehaviour
     
     private void CreatePoop(Vector3 position)
     {
-        Instantiate(poopPrefab, position, Quaternion.identity).transform.parent = poopParent;
+        Manager.manager.poopPool.Get().transform.position = position;
     }
 
     public void CreatePoop()
@@ -82,8 +84,7 @@ public class Head : MonoBehaviour
 
     private void CreateBody(Vector3 position)
     {
-        var newBody = Instantiate(bodyPrefab, position, Quaternion.identity);
-        newBody.transform.SetParent(bodyParent);
+        Manager.manager.bodyPool.Get().transform.position = position;
     }
 
     private IEnumerator DeleteBody(int num)
@@ -95,18 +96,18 @@ public class Head : MonoBehaviour
         }
     }
     
-    private IEnumerator ReverseInputDebuff(int time)
-    {
-        reverseInput = true;
-        yield return new WaitForSeconds(time);
-        reverseInput = false;
-    }
+    // private IEnumerator ReverseInputDebuff(int time)
+    // {
+    //     reverseInput = true;
+    //     yield return new WaitForSeconds(time);
+    //     reverseInput = false;
+    // }
 
     private void RemoveBody()
     {
         if (TailTransform)
         {
-            Destroy(TailTransform.gameObject);
+            Manager.manager.bodyPool.Release(TailTransform.gameObject);
         }
         else
         {
@@ -129,7 +130,7 @@ public class Head : MonoBehaviour
         transform.position = nextPos;
 
         //Step Command Logics
-        foreach (var poopCommand in PoopCommands.Where(poopCommand => !poopCommand.executed))
+        foreach (var poopCommand in StepCommands.Where(command => !command.executed))
         {
             poopCommand.Step();
         }
@@ -158,6 +159,7 @@ public class Head : MonoBehaviour
 
     private void Update()
     {
+        //Input
         if (canInput && !lostControl)
         {
             float input;
@@ -189,6 +191,12 @@ public class Head : MonoBehaviour
             canInput = true;
             timer = 0;
         }
+        
+        foreach (var timerCommand in TimerCommands.Where(command=>!command.executed))
+        {
+            timerCommand.Update(Time.deltaTime);
+        }
+        
     }
     private void OnTriggerEnter2D(Collider2D other)
     {
@@ -196,10 +204,7 @@ public class Head : MonoBehaviour
         {
             score += speedLevel;
             Manager.manager.scoreText.text = $"Score: {score}";
-            Manager.manager.PlayAudio(1);
-            
-            Destroy(food);
-            food = null;
+            Manager.manager.CreateFood();
             
             //Create a new body
             CreateBody(TailTransform ? TailTransform.position : transform.position - (Vector3)(Vector2)now * unitScale);
@@ -210,80 +215,126 @@ public class Head : MonoBehaviour
 
             AddStepCommand<CmdCreatePoop>(DigestMoveNumber);
 
-            Manager.manager.CreateFood();
-        }
-        if (other.tag.Equals("Poop"))
-        {
-            Destroy(other.gameObject);
-            var damageType = (PoopEffectType)Rng.Next(System.Enum.GetNames(typeof(PoopEffectType)).Length);
-            int option = 0;
-            switch (damageType)
-            {
-                case PoopEffectType.ReduceLength:
-                {
-                    option = poopDamage;
-                    StartCoroutine(DeleteBody(poopDamage));
-                    poopDamage++;
-                    break;
-                }
-                case PoopEffectType.ReverseInput:
-                {
-                    option = debuffTime;
-                    if (reverseInputHandler != null)
-                    {
-                        StopCoroutine(reverseInputHandler);
-                        reverseInputHandler = null;
-                    }
-                    reverseInputHandler = StartCoroutine(ReverseInputDebuff(debuffTime));
-                    break;
-                }
-                case PoopEffectType.LostControl:
-                {
-                    lostControl = true;
-                    AddStepCommand<CmdLostControl>(lostControlPower);
-                    lostControlPower++;
-    
-                    //legacy version
-                    {
-                        // option = debuffTime;
-                        // if (lostControlHandler != null)
-                        // {
-                        //     StopCoroutine(lostControlHandler);
-                        //     lostControlHandler = null;
-                        // }
-                        // lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
-                    }
-                    break;
-                }
-                case PoopEffectType.Speedup:
-                {
-                    speedLevel++;
-                    option = speedLevel;
-                    break;
-                }
-                case PoopEffectType.CreateMole:
-                {
-                    Manager.manager.CreateMole();
-                    break;
-                }
-            }
-            Manager.manager.TellPoopEffect(damageType, option);
+            
         }
         if (other.tag.Equals("Body"))
         {
             Manager.manager.SnakeDie(SnakeDieReason.HitSelf);
         }
+        if (other.tag.Equals("Poop"))
+        {
+            Manager.manager.poopPool.Release(other.gameObject);
+            DealPoopEffect();
+
+        }
+    }
+
+    private void DealPoopEffect(int type = -1)
+    {
+        PoopEffectType damageType;
+        if (type >= 0)
+        {
+            damageType = (PoopEffectType)type;
+        }
+        else
+        {
+            damageType = (PoopEffectType)Rng.Next(System.Enum.GetNames(typeof(PoopEffectType)).Length);
+        } 
+        var option = 0;
+        switch (damageType)
+        {
+            case PoopEffectType.ReverseInput:
+            {
+                AddTimerCommand<CmdReverseInput>(reverseTime);
+                return;
+                    
+                // Legacy version
+                // option = debuffTime;
+                // if (reverseInputHandler != null)
+                // {
+                //     StopCoroutine(reverseInputHandler);
+                //     reverseInputHandler = null;
+                // }
+                //
+                // reverseInputHandler = StartCoroutine(ReverseInputDebuff(debuffTime));
+                // break;
+            }
+            case PoopEffectType.LostControl:
+            {
+                AddStepCommand<CmdLostControl>(lostControlPower++);
+                return;
+                    
+                //legacy version
+
+                // option = debuffTime;
+                // if (lostControlHandler != null)
+                // {
+                //     StopCoroutine(lostControlHandler);
+                //     lostControlHandler = null;
+                // }
+                // lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
+            }
+            case PoopEffectType.ReduceLength:
+            {
+                option = reduceLengthAmount;
+                StartCoroutine(DeleteBody(reduceLengthAmount));
+                reduceLengthAmount++;
+                break;
+            }
+            case PoopEffectType.Speedup:
+            {
+                speedLevel++;
+                option = speedLevel;
+                break;
+            }
+            case PoopEffectType.CreateMole:
+            {
+                Manager.manager.CreateMole();
+                break;
+            }
+            default:
+                return;
+        }
+        Manager.manager.TellPoopEffect(damageType, option);
     }
 
     private static void AddStepCommand<T>(int step) where T: StepCommand, new()
     {
-        var newCommand = PoopCommands.FirstOrDefault(poopCommand => poopCommand.executed && poopCommand.GetType() == typeof(T));
+        StepCommand newCommand;
+        if (typeof(T) != typeof(CmdCreatePoop))
+        {
+            newCommand = StepCommands.FirstOrDefault(command => command.GetType() == typeof(T) && !command.executed);
+            if (newCommand != null)
+            {
+                newCommand.Reset(step);
+                return;
+            }
+        }
+
+        newCommand = StepCommands.FirstOrDefault(command => command.GetType() == typeof(T) && command.executed);
         if (newCommand == null)
         {
             newCommand = new T();
-            PoopCommands.Add(newCommand);
+            StepCommands.Add(newCommand);
         }
         newCommand.Init(step);
+    }
+
+    private static void AddTimerCommand<T>(float time) where T : TimerCommand, new()
+    {
+        var newCommand = TimerCommands.FirstOrDefault(command => command.GetType() == typeof(T) && !command.executed);
+        if (newCommand != null)
+        {
+            newCommand.Reset(time);
+            return;
+        }
+        newCommand = TimerCommands.FirstOrDefault(command => command.GetType() == typeof(T) && command.executed);
+        if (newCommand == null)
+        {
+            newCommand = new T();
+            TimerCommands.Add(newCommand);
+        }
+        newCommand.Init(time);
     }
 
 }

@@ -9,9 +9,24 @@ using UnityEngine.UI;
 public class Manager : MonoBehaviour
 {
     public static Manager manager;
+    
     public GameObject headPrefab;
     public GameObject molePrefab;
     public Transform moleParent;
+    
+    public GameObject bodyPrefab;
+    public Transform bodyParent;
+    public ObjectPool<GameObject> bodyPool;
+
+    public GameObject poopPrefab;
+    public Transform poopParent;
+    public ObjectPool<GameObject> poopPool;
+
+    public GameObject foodPrefab;
+    
+    
+    
+    
     public BoxCollider2D border;
     public SpriteRenderer spriteRenderer;
     public TMP_Text deathText;
@@ -20,13 +35,16 @@ public class Manager : MonoBehaviour
     public ObjectPool<GameObject> textPool;
     public GameObject textPrefab;
     
+    public Transform recycleBin;
+    
     public TMP_Text scoreText;
     public Button startButton;
     
     public Head head;
     private Vector3 borderSize;
     public AudioClip[] audioClips;
-    public List<StepCommand> realPoopCommands;
+    public List<StepCommand> realStepCommands;
+    public List<TimerCommand> realTimerCommands;
     public AudioSource audioSource;
     private Coroutine ledHandler;
     public Vector2Int gridMax;
@@ -41,27 +59,88 @@ public class Manager : MonoBehaviour
         gridMax = new Vector2Int(
             (int)(spriteRenderer.size.x / 0.5f) / 2,
             (int)(spriteRenderer.size.y / 0.5f) / 2);
-        realPoopCommands = new List<StepCommand>();
+        realStepCommands = new List<StepCommand>();
+        realTimerCommands = new List<TimerCommand>();
+        
         textPool = new ObjectPool<GameObject>(CreateText, OnGetText, OnReleaseText, OnDestroyText, true, 5, 20);
+        bodyPool = new ObjectPool<GameObject>(CreateBody, OnGetBody, OnReleaseBody, OnDestroyBody, true, 10, 50);
+        poopPool = new ObjectPool<GameObject>(CreatePoop, OnGetPoop, OnReleasePoop, OnDestroyPoop, true, 25, 100);
     }
 
+    #region Poop Pooling
+
+    private void OnDestroyPoop(GameObject obj)
+    {
+        Debug.Log($"Poop pool is full, poop {obj.GetInstanceID()} is destroyed.");
+        DestroyImmediate(obj);
+    }
+
+    private void OnReleasePoop(GameObject obj)
+    {
+        obj.transform.parent = recycleBin;
+        obj.SetActive(false);
+    }
+
+    private void OnGetPoop(GameObject obj)
+    {
+        obj.transform.parent = poopParent;
+        obj.SetActive(true);
+    }
+
+    private GameObject CreatePoop()
+    {
+        return Instantiate(poopPrefab);
+    }
+
+    #endregion
+    
+    #region Body Pooling
+
+        private void OnDestroyBody(GameObject obj)
+        {
+            Debug.Log($"Body Pool is full, Body {obj.GetInstanceID()} is destroyed.");
+            DestroyImmediate(obj);
+        }
+    
+        private void OnReleaseBody(GameObject obj)
+        {
+            obj.transform.SetParent(recycleBin);
+            obj.SetActive(false);
+        }
+    
+        private void OnGetBody(GameObject obj)
+        {
+            obj.transform.SetParent(bodyParent);
+            obj.SetActive(true);
+        }
+    
+        private GameObject CreateBody()
+        {
+            return Instantiate(bodyPrefab);
+        }
+
+    #endregion
+    
     #region TextPooling
 
     private void OnDestroyText(GameObject obj)
     {
-        //Do nothing
+        Debug.Log($"Text pool is full, Tmp_Text {obj.GetInstanceID()} is destroyed.");
+        DestroyImmediate(obj);
     }
 
     private void OnReleaseText(GameObject obj)
     {
         obj.GetComponent<TMP_Text>().text = "";
-        obj.transform.SetParent(null);
+        obj.transform.SetParent(recycleBin);
+        obj.SetActive(false);
         LayoutRebuilder.ForceRebuildLayoutImmediate(content);
     }
 
     private void OnGetText(GameObject obj)
     {
         obj.transform.SetParent(content);
+        obj.SetActive(true);
         LayoutRebuilder.ForceRebuildLayoutImmediate(content);
     }
 
@@ -75,23 +154,13 @@ public class Manager : MonoBehaviour
     #region Text Print
 
     public void TellPoopEffect(Head.PoopEffectType type,int option) {
-        string textContent = "";
-        bool isOption = false;
-        switch (type) {
+        var textContent = "";
+        switch (type)
+        {
             case Head.PoopEffectType.ReduceLength:
                 textContent += $"Reduced your length by {option}.";
                 PlayAudio(4);
                 break;
-            case Head.PoopEffectType.ReverseInput:
-                isOption = true;
-                textContent += $"Input Axis reversed for {option}s";
-                PlayAudio(0);
-                break;
-            case Head.PoopEffectType.LostControl:
-                // isOption = true;
-                // content += $"Lost Control for {option}s";
-                PlayAudio(3);
-                return;
             case Head.PoopEffectType.Speedup:
                 textContent += $"Speed Level Up to {option}";
                 PlayAudio(2);
@@ -99,12 +168,13 @@ public class Manager : MonoBehaviour
             case Head.PoopEffectType.CreateMole:
                 textContent += $"Summoned a mole.";
                 break;
+            default:
+                return;
         }
-        if(isOption)PrintToScreen(textPool.Get().GetComponent<TMP_Text>(),textContent,option);
-        else PrintToScreen(textPool.Get().GetComponent<TMP_Text>(),textContent);
+        PrintToScreen(textPool.Get().GetComponent<TMP_Text>(),textContent);
     }
 
-    private void PrintToScreen(TMP_Text text,string textContent, int time = 3) {
+    public void PrintToScreen(TMP_Text text,string textContent, int time = 3) {
         StartCoroutine(PostLed(text, textContent, time));
     }
 
@@ -122,7 +192,6 @@ public class Manager : MonoBehaviour
     public void StartGame() {
         head = Instantiate(headPrefab).GetComponent<Head>();
         head.transform.position = transform.position;
-        head.bodyParent = transform;
         startButton.gameObject.SetActive(false);
         deathText.text = "Poop Effects:";
         Time.timeScale = 1;
@@ -164,7 +233,12 @@ public class Manager : MonoBehaviour
         Destroy(head.food);
         head.gameObject.SetActive(false);
         
-        foreach (var command in realPoopCommands)
+        foreach (var command in realStepCommands)
+        {
+            command.executed = true;
+        }
+
+        foreach (var command in realTimerCommands)
         {
             command.executed = true;
         }
@@ -180,9 +254,9 @@ public class Manager : MonoBehaviour
 
     #region Create/Destroy
 
-    IEnumerator DeleteAllTail() {
-        while (transform.childCount > 0) {
-            Destroy(transform.GetChild(0).gameObject);
+    private IEnumerator DeleteAllTail() {
+        while (bodyParent.childCount > 0) {
+            bodyPool.Release(bodyParent.GetChild(0).gameObject);
             yield return null;
         }
     }
@@ -201,7 +275,7 @@ public class Manager : MonoBehaviour
         
         if (!head.food)
         {
-            head.food = Instantiate(head.foodPrefab, pos, Quaternion.identity);
+            head.food = Instantiate(foodPrefab, pos, Quaternion.identity);
         }
         else head.food.transform.position = pos;
     }
@@ -278,21 +352,14 @@ public class Manager : MonoBehaviour
     public bool IsValidPoop(Vector2Int gridPos)
     {
         if (!IsGridPosInRange(gridPos)) return false;
-        if (IsPosOccupied(gridPos, out var col))
-        {
-            if (col.CompareTag("Poop"))
-            {
-                return true;
-            }
-        }
-        return false;
+        return IsPosOccupied(gridPos, out var col) && col.CompareTag("Poop");
     }
 
     #endregion
 
     
     public void PlayAudio(int index) {
-        // audioSource.clip = audioClips[index];
-        // audioSource.Play();
+        audioSource.clip = audioClips[index];
+        audioSource.Play();
     }
 }
