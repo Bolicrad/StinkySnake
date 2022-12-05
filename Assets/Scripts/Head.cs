@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -233,42 +234,41 @@ public class Head : MonoBehaviour
         else
         {
             damageType = (PoopEffectType)Rng.Next(System.Enum.GetNames(typeof(PoopEffectType)).Length);
-        } 
-        var option = 0;
+        }
         switch (damageType)
         {
             case PoopEffectType.ReverseInput:
             {
                 AddTimerCommand<CmdReverseInput>(ReverseTime);
-                return;
+                break;
             }
             case PoopEffectType.LostControl:
             {
                 AddStepCommand<CmdLostControl>(lostControlPower++);
-                return;
+                break;
             }
             case PoopEffectType.ReduceLength:
             {
-                option = reduceLengthAmount;
                 StartCoroutine(DeleteBody(reduceLengthAmount));
-                reduceLengthAmount++;
+                Manager.manager.PlayAudio(4);
+                Manager.manager.PrintToScreenOneTime($"Reduced your length by {reduceLengthAmount++}.");
+                
                 break;
             }
             case PoopEffectType.Speedup:
             {
-                speedLevel++;
-                option = speedLevel;
+                Manager.manager.PlayAudio(2);
+                Manager.manager.PrintToScreenOneTime($"Speed Level Up to {speedLevel++}");
+                
                 break;
             }
             case PoopEffectType.CreateMole:
             {
                 Manager.manager.CreateMole();
-                return;
+                break;
             }
-            default:
-                return;
+            default: break;
         }
-        Manager.manager.TellPoopEffect(damageType, option);
     }
 
     #endregion

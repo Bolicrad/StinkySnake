@@ -162,7 +162,7 @@ public class Manager : MonoBehaviour
 
     #endregion
 
-    #region Text Print
+    #region User Feedback
 
     public void AddScore(int amount)
     {
@@ -173,33 +173,22 @@ public class Manager : MonoBehaviour
         scoreText.text += $"\nHigh Score:{HighScore}";
     }
 
-    public void TellPoopEffect(Head.PoopEffectType type,int option) {
-        var textContent = "";
-        switch (type)
-        {
-            case Head.PoopEffectType.ReduceLength:
-                textContent += $"Reduced your length by {option}.";
-                PlayAudio(4);
-                break;
-            case Head.PoopEffectType.Speedup:
-                textContent += $"Speed Level Up to {option}";
-                PlayAudio(2);
-                break;
-            default:
-                return;
-        }
-        PrintToScreen(textPool.Get().GetComponent<TMP_Text>(),textContent);
+    public void PrintToScreenOneTime(string textContent, int time = 3) {
+        StartCoroutine(PostLed(textContent, time));
     }
 
-    private void PrintToScreen(TMP_Text text,string textContent, int time = 3) {
-        StartCoroutine(PostLed(text, textContent, time));
-    }
-
-    private IEnumerator PostLed(TMP_Text text, string textContent, int time) {
-
-        text.text = textContent;
+    private IEnumerator PostLed(string textContent, int time)
+    {
+        var tmpText = textPool.Get().GetComponent<TMP_Text>();
+        tmpText.text = textContent;
         yield return new WaitForSeconds(time);
-        textPool.Release(text.gameObject);
+        textPool.Release(tmpText.gameObject);
+    }
+    
+    public void PlayAudio(int index)
+    {
+        audioSource.clip = audioClips[index % audioClips.Length];
+        audioSource.Play();
     }
 
     #endregion
@@ -396,11 +385,5 @@ public class Manager : MonoBehaviour
     }
 
     #endregion
-
     
-    public void PlayAudio(int index)
-    {
-        audioSource.clip = audioClips[index % audioClips.Length];
-        audioSource.Play();
-    }
 }
