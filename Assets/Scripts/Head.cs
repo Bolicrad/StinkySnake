@@ -7,6 +7,8 @@ using UnityEngine;
 
 public class Head : MonoBehaviour
 {
+    #region Enums
+
     public enum PoopEffectType
     {
         ReduceLength,
@@ -22,7 +24,12 @@ public class Head : MonoBehaviour
         HitWall, 
         Length0, 
         PoopSnake
-    };
+    }
+
+    #endregion
+    
+    #region Parameters
+    
     private static readonly System.Random Rng = new System.Random();
     private Vector2Int now; // actual head direction
     private int angle;
@@ -49,24 +56,12 @@ public class Head : MonoBehaviour
     private float timer;
     public float defaultTimerGap = 0.1f;
     private int speedLevel = 1;
-    
-
-    //private Coroutine lostControlHandler;
-    //private Coroutine reverseInputHandler;
 
     private static List<StepCommand> StepCommands => Manager.manager.realStepCommands;
     private static List<TimerCommand> TimerCommands => Manager.manager.realTimerCommands;
-
-    public void Start()
-    {
-        for (var i = 0; i < 3; ++i)
-        {
-            CreateBody(transform.position - (i + 1) * new Vector3(0, unitScale, 0));
-        }
-        now = Vector2Int.up;
-        angle = 0;
-        Manager.manager.CreateFood();
-    }
+    #endregion
+    
+    #region Create/Destroy
 
     private IEnumerator CreatePoop(Vector3 position)
     {
@@ -94,13 +89,6 @@ public class Head : MonoBehaviour
             RemoveBody();
         }
     }
-    
-    // private IEnumerator ReverseInputDebuff(int time)
-    // {
-    //     reverseInput = true;
-    //     yield return new WaitForSeconds(time);
-    //     reverseInput = false;
-    // }
 
     private void RemoveBody()
     {
@@ -114,46 +102,19 @@ public class Head : MonoBehaviour
         }
     }
 
-    private void MoveBody()
+    #endregion
+
+    #region Game Cycle
+
+    public void Start()
     {
-        tmp = transform.position;
-        Vector2 nextPos = unitScale * (Vector2)now + (Vector2)transform.position;
-        
-        //Judge If the snake run out of the range (if so die with the hit wall reason)
-        if (!Manager.manager.IsPosInRange(nextPos))
+        for (var i = 0; i < 3; ++i)
         {
-            Manager.manager.SnakeDie(SnakeDieReason.HitWall);
-            return;
+            CreateBody(transform.position - (i + 1) * new Vector3(0, unitScale, 0));
         }
-
-        transform.position = nextPos;
-
-        //Step Command Logics
-        foreach (var poopCommand in StepCommands.Where(command => !command.executed))
-        {
-            poopCommand.Step();
-        }
-        
-        // if (digesting)
-        // {
-        //     if (poopCount > 0)
-        //     {
-        //         poopCount--;
-        //     }
-        //     else
-        //     {
-        //         CreatePoop(TailTransform ? TailTransform.position : tmp);
-        //         digesting = false;
-        //     }
-        // }
-        
-
-        if (TailTransform)
-        {
-            TailTransform.position = tmp;
-            TailTransform.SetAsFirstSibling();
-        }
-        transform.eulerAngles = angle * Vector3.forward;
+        now = Vector2Int.up;
+        angle = 0;
+        Manager.manager.CreateFood();
     }
 
     private void Update()
@@ -186,7 +147,7 @@ public class Head : MonoBehaviour
         
         if (timer > defaultTimerGap / Mathf.Sqrt(speedLevel))
         {
-            MoveBody();
+            Step();
             canInput = true;
             timer = 0;
         }
@@ -197,34 +158,68 @@ public class Head : MonoBehaviour
         }
         
     }
+    private void Step()
+    {
+        //Calculate target position
+        tmp = transform.position;
+        Vector2 nextPos = unitScale * (Vector2)now + (Vector2)transform.position;
+        
+        //Judge If the snake run out of the range (if so die with the hit wall reason)
+        if (!Manager.manager.IsPosInRange(nextPos))
+        {
+            Manager.manager.SnakeDie(SnakeDieReason.HitWall);
+            return;
+        }
+        
+        //Step Command Logics
+        foreach (var poopCommand in StepCommands.Where(command => !command.executed))
+        {
+            poopCommand.Step();
+        }
+
+        //Move
+        transform.position = nextPos;
+        if (TailTransform)
+        {
+            TailTransform.position = tmp;
+            TailTransform.SetAsFirstSibling();
+        }
+        transform.eulerAngles = angle * Vector3.forward;
+
+
+    }
+
+    #endregion
+
+    #region Collision
+    
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.tag.Equals("Food"))
+        if (other.CompareTag("Food"))
         {
-
             Manager.manager.AddScore(speedLevel);
             Manager.manager.CreateFood();
             
             //Create a new body
             CreateBody(TailTransform ? TailTransform.position : transform.position - (Vector3)(Vector2)now * unitScale);
             
-            //Set up a poop command
-            // digesting = true;
-            // poopCount = digestMoveNumber;
-
             AddStepCommand<CmdCreatePoop>(DigestMoveNumber);
-
-            
         }
-        if (other.tag.Equals("Body"))
+        if (other.CompareTag("Body"))
         {
             Manager.manager.SnakeDie(SnakeDieReason.HitSelf);
         }
-        if (other.tag.Equals("Poop"))
+        if (other.CompareTag("Poop"))
         {
             Manager.manager.poopPool.Release(other.gameObject);
             DealPoopEffect();
+        }
 
+        // ReSharper disable once Unity.UnknownTag
+        if (other.CompareTag("Mole"))
+        {
+            Manager.manager.AddScore(20);
+            Destroy(other.gameObject);
         }
     }
 
@@ -246,32 +241,11 @@ public class Head : MonoBehaviour
             {
                 AddTimerCommand<CmdReverseInput>(ReverseTime);
                 return;
-                    
-                // Legacy version
-                // option = debuffTime;
-                // if (reverseInputHandler != null)
-                // {
-                //     StopCoroutine(reverseInputHandler);
-                //     reverseInputHandler = null;
-                // }
-                //
-                // reverseInputHandler = StartCoroutine(ReverseInputDebuff(debuffTime));
-                // break;
             }
             case PoopEffectType.LostControl:
             {
                 AddStepCommand<CmdLostControl>(lostControlPower++);
                 return;
-                    
-                //legacy version
-
-                // option = debuffTime;
-                // if (lostControlHandler != null)
-                // {
-                //     StopCoroutine(lostControlHandler);
-                //     lostControlHandler = null;
-                // }
-                // lostControlHandler = StartCoroutine(LostControlDebuff(debuffTime));
             }
             case PoopEffectType.ReduceLength:
             {
@@ -296,6 +270,10 @@ public class Head : MonoBehaviour
         }
         Manager.manager.TellPoopEffect(damageType, option);
     }
+
+    #endregion
+    
+    #region Command
 
     private static void AddStepCommand<T>(int step) where T: StepCommand, new()
     {
@@ -335,5 +313,8 @@ public class Head : MonoBehaviour
         }
         newCommand.Init(time);
     }
+
+
+    #endregion
 
 }

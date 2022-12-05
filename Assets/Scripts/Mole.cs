@@ -172,6 +172,8 @@ public class Mole : MonoBehaviour
                 yield return Utils.WaitForSeconds(0.3f);
                 cols[0].transform.position = poopShift;
                 GridPrinter.gridPrinter.drawingAim = false;
+                yield return Utils.WaitForSeconds(0.3f);
+                Manager.manager.Match3Poop(poopShift);
             }
         }
 

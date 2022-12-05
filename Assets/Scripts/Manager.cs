@@ -30,7 +30,7 @@ public class Manager : MonoBehaviour
 
     public GameObject foodPrefab;
     
-    public BoxCollider2D border;
+    //public BoxCollider2D border;
     public SpriteRenderer spriteRenderer;
     public TMP_Text deathText;
     
@@ -63,7 +63,7 @@ public class Manager : MonoBehaviour
     {
         manager = this;
         borderSize = Camera.main!.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height));
-        border.size = new Vector2(borderSize.y * 2 - 1.5f, borderSize.y * 2 - 1.5f);
+        //border.size = new Vector2(borderSize.y * 2 - 1.5f, borderSize.y * 2 - 1.5f);
         spriteRenderer.size = new Vector2(borderSize.y * 2 - 0.5f, borderSize.y * 2 - 0.5f);
         transform.position = new Vector3(borderSize.y - borderSize.x, 0);
         gridMax = new Vector2Int(
@@ -398,8 +398,9 @@ public class Manager : MonoBehaviour
     #endregion
 
     
-    public void PlayAudio(int index) {
-        audioSource.clip = audioClips[index];
+    public void PlayAudio(int index)
+    {
+        audioSource.clip = audioClips[index % audioClips.Length];
         audioSource.Play();
     }
 }

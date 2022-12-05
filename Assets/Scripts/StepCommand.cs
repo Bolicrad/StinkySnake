@@ -14,6 +14,7 @@ public class StepCommand:MyCommand
     public void Reset(int step)
     {
         stepRemain = step;
+        OnReset();
     }
     
     public void Step()
@@ -31,6 +32,11 @@ public class StepCommand:MyCommand
     {
         //Do nothing
     }
+
+    protected virtual void OnReset()
+    {
+        //Do nothing
+    }
 }
 
 
@@ -39,8 +45,13 @@ public class CmdCreatePoop : StepCommand
     protected override void OnInit()
     {
         base.OnInit();
-        Manager.manager.PlayAudio(1);
+        OnReset();
         OnStep();
+    }
+
+    protected override void OnReset()
+    {
+        Manager.manager.PlayAudio(1);
     }
 
     protected override void OnStep()
@@ -61,9 +72,14 @@ public class CmdLostControl : StepCommand
     protected override void OnInit()
     {
         base.OnInit();
+        OnReset();
+        OnStep();
+    }
+
+    protected override void OnReset()
+    {
         commander.lostControl = true;
         Manager.manager.PlayAudio(3);
-        OnStep();
     }
 
     protected override void OnStep()

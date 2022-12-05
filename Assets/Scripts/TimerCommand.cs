@@ -15,7 +15,7 @@ public class TimerCommand : MyCommand
     public void Reset(float time)
     {
         timeRemain = time;
-        OnInit();
+        OnReset();
     }
 
     public void Update(float delta)
@@ -33,6 +33,11 @@ public class TimerCommand : MyCommand
     {
         //Do nothing
     }
+
+    protected virtual void OnReset()
+    {
+        //Do nothing
+    }
 }
 
 public class CmdReverseInput : TimerCommand
@@ -40,9 +45,14 @@ public class CmdReverseInput : TimerCommand
     protected override void OnInit()
     {
         base.OnInit();
+        OnReset();
+        OnUpdate();
+    }
+
+    protected override void OnReset()
+    {
         commander.reverseInput = true;
         Manager.manager.PlayAudio(0);
-        OnUpdate();
     }
 
     protected override void OnUpdate()
