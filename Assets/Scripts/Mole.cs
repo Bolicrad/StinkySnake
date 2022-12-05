@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Coroutines;
+using TMPro;
 using Coroutine = Coroutines.Coroutine;
 using Random = UnityEngine.Random;
 using Vector2 = UnityEngine.Vector2;
@@ -10,10 +11,11 @@ using Vector3 = UnityEngine.Vector3;
 public class Mole : MonoBehaviour
 {
     private Coroutine main;
-    
+    private TMP_Text tmpText;
     // Start is called before the first frame update
     void Start()
     {
+        tmpText = Manager.manager.textPool.Get().GetComponent<TMP_Text>();
         main = new Coroutine(Main());
     }
 
@@ -23,9 +25,15 @@ public class Mole : MonoBehaviour
         main.Update();
     }
 
+    private void OnDestroy()
+    {
+        Manager.manager.textPool.Release(tmpText.gameObject);
+    }
+
     IEnumerable<Instruction> Main()
     {
         Vector2Int dir = Vector2Int.up;
+        tmpText.text = "Summoned a Mole. Beat it!";
         try
         {
             Transform target = null;
@@ -36,19 +44,21 @@ public class Mole : MonoBehaviour
                     Wander(dir, finalDir => dir = finalDir));
                 if (target != null)
                 {
+                    tmpText.text = "Mole: Dashing to food.";
                     yield return ControlFlow.Call(DashToTarget(target));
                 }
             }
         }
         finally
         {
-            Debug.Log("Mole Main Cycle escaped");
-            Destroy(gameObject);
+            tmpText.text = "Mole: Escaped.";
+            if(gameObject)Destroy(gameObject);
         }
     }
 
     IEnumerable<Instruction> FindFood(Action<Transform> targetFound)
     {
+        tmpText.text = "Mole: Searching for food.";
         GameObject foodObj = GameObject.FindWithTag("Food");
         while (foodObj!=null &&
                Manager.manager.WorldToGridPoint(transform.position).x !=
@@ -139,21 +149,28 @@ public class Mole : MonoBehaviour
     
     IEnumerable<Instruction> MoveBodyTo(Vector2 targetPos)
     {
-        if (Manager.manager.IsPosOccupied(targetPos, out var col))
+        if (Manager.manager.IsPosOccupied(targetPos, out var cols))
         {
-            Debug.Log($"Mole Enter: {col.tag}");
-            if (col.CompareTag("Body") || col.CompareTag("Head"))
+            Debug.Log($"Mole Enter: {cols[0].tag}");
+
+            if (cols[0].CompareTag("Head"))
+            {
+                Manager.manager.AddScore(20);
+                Destroy(gameObject);
+            }
+
+            if (cols[0].CompareTag("Body"))
             {
                 Manager.manager.SnakeDie(Head.SnakeDieReason.PoopSnake);
             }
 
-            if (col.CompareTag("Poop"))
+            if (cols[0].CompareTag("Poop"))
             {
                 var poopShift = Manager.manager.GetUnoccupiedPos();
                 GridPrinter.gridPrinter.aimPos = poopShift;
                 GridPrinter.gridPrinter.drawingAim = true;
                 yield return Utils.WaitForSeconds(0.3f);
-                col.transform.position = poopShift;
+                cols[0].transform.position = poopShift;
                 GridPrinter.gridPrinter.drawingAim = false;
             }
         }

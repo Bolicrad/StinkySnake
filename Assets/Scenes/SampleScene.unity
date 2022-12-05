@@ -285,7 +285,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 306.255}
+  m_AnchoredPosition: {x: 0, y: 306.25504}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &277310007
@@ -1387,7 +1387,7 @@ BoxCollider2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1260629172}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Density: 1
   m_Material: {fileID: 0}
   m_IsTrigger: 1
@@ -1425,6 +1425,7 @@ MonoBehaviour:
   bodyParent: {fileID: 1260629173}
   poopPrefab: {fileID: 3021192735858863081, guid: 830c0c1e8092d4a3bba31f844030c94d, type: 3}
   poopParent: {fileID: 1759395152}
+  tempPoopList: []
   foodPrefab: {fileID: 3021192735858863081, guid: 20cbe9d70c5f748edb39a8522b9b1bd5, type: 3}
   border: {fileID: 1260629174}
   spriteRenderer: {fileID: 1260629177}

@@ -1,11 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.UI;
+using GameObject = UnityEngine.GameObject;
+
 // ReSharper disable Unity.InefficientPropertyAccess
 
+[SuppressMessage("ReSharper", "Unity.PreferNonAllocApi")]
 public class Manager : MonoBehaviour
 {
     public static Manager manager;
@@ -21,11 +26,9 @@ public class Manager : MonoBehaviour
     public GameObject poopPrefab;
     public Transform poopParent;
     public ObjectPool<GameObject> poopPool;
+    public List<GameObject> tempPoopList;
 
     public GameObject foodPrefab;
-    
-    
-    
     
     public BoxCollider2D border;
     public SpriteRenderer spriteRenderer;
@@ -36,8 +39,15 @@ public class Manager : MonoBehaviour
     public GameObject textPrefab;
     
     public Transform recycleBin;
-    
+
+    public int score;
+
+    private int HighScore {
+        get => PlayerPrefs.GetInt("HighScore", 0);
+        set => PlayerPrefs.SetInt("HighScore", value);
+    }
     public TMP_Text scoreText;
+    
     public Button startButton;
     
     public Head head;
@@ -61,6 +71,7 @@ public class Manager : MonoBehaviour
             (int)(spriteRenderer.size.y / 0.5f) / 2);
         realStepCommands = new List<StepCommand>();
         realTimerCommands = new List<TimerCommand>();
+        tempPoopList = new List<GameObject>();
         
         textPool = new ObjectPool<GameObject>(CreateText, OnGetText, OnReleaseText, OnDestroyText, true, 5, 20);
         bodyPool = new ObjectPool<GameObject>(CreateBody, OnGetBody, OnReleaseBody, OnDestroyBody, true, 10, 50);
@@ -153,6 +164,15 @@ public class Manager : MonoBehaviour
 
     #region Text Print
 
+    public void AddScore(int amount)
+    {
+        score += amount;
+        scoreText.text = $"Score: {score}";
+        if (score <= HighScore) return;
+        HighScore = score;
+        scoreText.text += $"\nHigh Score:{HighScore}";
+    }
+
     public void TellPoopEffect(Head.PoopEffectType type,int option) {
         var textContent = "";
         switch (type)
@@ -165,16 +185,13 @@ public class Manager : MonoBehaviour
                 textContent += $"Speed Level Up to {option}";
                 PlayAudio(2);
                 break;
-            case Head.PoopEffectType.CreateMole:
-                textContent += $"Summoned a mole.";
-                break;
             default:
                 return;
         }
         PrintToScreen(textPool.Get().GetComponent<TMP_Text>(),textContent);
     }
 
-    public void PrintToScreen(TMP_Text text,string textContent, int time = 3) {
+    private void PrintToScreen(TMP_Text text,string textContent, int time = 3) {
         StartCoroutine(PostLed(text, textContent, time));
     }
 
@@ -189,7 +206,9 @@ public class Manager : MonoBehaviour
 
     #region Game Life Cycle
 
-    public void StartGame() {
+    public void StartGame()
+    {
+        score = 0;
         head = Instantiate(headPrefab).GetComponent<Head>();
         head.transform.position = transform.position;
         startButton.gameObject.SetActive(false);
@@ -197,13 +216,7 @@ public class Manager : MonoBehaviour
         Time.timeScale = 1;
     }
     public void SnakeDie(Head.SnakeDieReason reason) {
-        var highScore = PlayerPrefs.GetInt("HighScore", 0);
-        if (head.score > highScore) {
-            highScore = head.score;
-            PlayerPrefs.SetInt("HighScore", highScore);
-        }
         Time.timeScale = 0;
-
         var text = reason switch
         {
             Head.SnakeDieReason.HitSelf => "You ate your body.",
@@ -212,7 +225,7 @@ public class Manager : MonoBehaviour
             Head.SnakeDieReason.PoopSnake => "Another Snake ate you.",
             _ => ""
         };
-        scoreText.text = $"Score: {head.score} \nHigh Score: {highScore}";
+        scoreText.text = $"Score: {score}\nHigh Score: {HighScore}";
         deathText.text = text;
         PlayAudio(5);
         startButton.gameObject.SetActive(true);
@@ -288,9 +301,9 @@ public class Manager : MonoBehaviour
     {
         var fixedPos = GetRandomPos();
 
-        while (IsPosOccupied(fixedPos, out var col))
+        while (IsPosOccupied(fixedPos, out var cols))
         {
-            if (col!= null) Debug.Log($"Occupied by {col.tag}");
+            if (cols.Length > 0) Debug.Log(cols);
             fixedPos = GetRandomPos();
         }
 
@@ -307,26 +320,20 @@ public class Manager : MonoBehaviour
         return GridPrinter.WorldToGridPoint(pos, transform.position);
     }
 
-    public Vector2 GetRandomPos()
+    private Vector2 GetRandomPos()
     {
         var gridPos = GridPrinter.GetRandomGridPos(gridMax);
         return GridPrinter.GridToWorldPoint(gridPos, transform.position);
     }
 
-    public bool IsPosOccupied(Vector2 pos, out Collider2D col)
+    public bool IsPosOccupied(Vector2 pos, out Collider2D[] cols)
     {
-        // ReSharper disable once Unity.PreferNonAllocApi
-        col = null;
-        var colliders = Physics2D.OverlapPointAll(pos);
-        if (colliders.Length > 0)
-        {
-            foreach (Collider2D other in colliders)
-            {
-                col = other;
-            }
-            return true;
-        }
-        return false;
+        cols = Physics2D.OverlapPointAll(pos);
+        // foreach (var col in cols)
+        // {
+        //     Debug.Log($"Position {pos} is occupied by {col.tag}");
+        // }
+        return cols.Length > 0;
     }
 
     public bool IsPosInRange(Vector2 pos)
@@ -334,7 +341,7 @@ public class Manager : MonoBehaviour
         return IsGridPosInRange(GridPrinter.WorldToGridPoint(pos, transform.position));
     }
 
-    public bool IsGridPosInRange(Vector2Int gridPos)
+    private bool IsGridPosInRange(Vector2Int gridPos)
     {
         return Mathf.Abs(gridPos.x) <= gridMax.x && Mathf.Abs(gridPos.y) <= gridMax.y;
     }
@@ -345,14 +352,47 @@ public class Manager : MonoBehaviour
 
     public void Match3Poop(Vector2 pos)
     {
-
-
+        var gridPos = WorldToGridPoint(pos);
+        tempPoopList.Clear();
+        if (GetPoopFromGridPos(gridPos) == null) return;
+        Match3Recursive(gridPos);
+        if (tempPoopList.Count >= 3)
+        {
+            Debug.Log($"Match 3 result: There are {tempPoopList.Count} poop connected with the one at {gridPos}.");
+        }
     }
-    
-    public bool IsValidPoop(Vector2Int gridPos)
+
+    private void Match3Recursive(Vector2Int gridPos)
     {
-        if (!IsGridPosInRange(gridPos)) return false;
-        return IsPosOccupied(gridPos, out var col) && col.CompareTag("Poop");
+        var poop = GetPoopFromGridPos(gridPos);
+        if (poop == null) return;
+        tempPoopList.Add(poop);
+        var left = GetPoopFromGridPos(gridPos + Vector2Int.left);
+        if (left!=null && !tempPoopList.Contains(left))
+        {
+            Match3Recursive(gridPos + Vector2Int.left);
+        }
+        var right = GetPoopFromGridPos(gridPos + Vector2Int.right);
+        if (right!=null && !tempPoopList.Contains(right))
+        {
+            Match3Recursive(gridPos + Vector2Int.right);
+        }        
+        var up = GetPoopFromGridPos(gridPos + Vector2Int.up);
+        if (up!=null && !tempPoopList.Contains(up))
+        {
+            Match3Recursive(gridPos + Vector2Int.up);
+        }        
+        var down = GetPoopFromGridPos(gridPos + Vector2Int.down);
+        if (down!=null && !tempPoopList.Contains(down))
+        {
+            Match3Recursive(gridPos + Vector2Int.down);
+        }
+    }
+
+    private GameObject GetPoopFromGridPos(Vector2Int gridPos)
+    {
+        if (!IsGridPosInRange(gridPos)) return null;
+        return IsPosOccupied(GridToWorldPos(gridPos), out var cols) ? (from col in cols where col.CompareTag("Poop") select col.gameObject).FirstOrDefault() : null;
     }
 
     #endregion

@@ -4,15 +4,12 @@ public class StepCommand:MyCommand
 {
     protected int stepRemain;
     
-    public static bool CheckDuplicate()
-    {
-        return true;
-    }
-    
     public void Init(int step)
     {
-        OnInit();
+        commander = Manager.manager.head;
+        executed = false;
         stepRemain = step;
+        OnInit();
     }
     public void Reset(int step)
     {
@@ -25,6 +22,7 @@ public class StepCommand:MyCommand
         if (stepRemain <= 0)
         {
             Execute();
+            executed = true;
         }
         else OnStep();
     }
@@ -38,11 +36,6 @@ public class StepCommand:MyCommand
 
 public class CmdCreatePoop : StepCommand
 {
-    public new static bool CheckDuplicate()
-    {
-        return true;
-    }
-
     protected override void OnInit()
     {
         base.OnInit();

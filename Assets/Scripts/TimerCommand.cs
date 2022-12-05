@@ -6,13 +6,16 @@ public class TimerCommand : MyCommand
 
     public void Init(float time)
     {
-        OnInit();
+        commander = Manager.manager.head;
+        executed = false;
         timeRemain = time;
+        OnInit();
     }
 
     public void Reset(float time)
     {
         timeRemain = time;
+        OnInit();
     }
 
     public void Update(float delta)
@@ -21,6 +24,7 @@ public class TimerCommand : MyCommand
         if (timeRemain <= 0f)
         {
             Execute();
+            executed = true;
         }
         else OnUpdate();
     }

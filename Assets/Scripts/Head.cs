@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,8 +28,7 @@ public class Head : MonoBehaviour
     private int angle;
     private static Transform TailTransform => BodyParent.childCount > 0 ? BodyParent.GetChild(BodyParent.childCount - 1) : null;
     private static Transform BodyParent => Manager.manager.bodyParent;
-    private static Transform PoopParent => Manager.manager.poopParent;
-    
+
     public GameObject food;
     private Vector3 tmp;
     private bool digesting;
@@ -44,8 +42,8 @@ public class Head : MonoBehaviour
     private int lostControlPower = 3;
     
     public bool reverseInput;
-    private int reverseTime = 3;
-    
+    private const float ReverseTime = 3f;
+
     private bool canInput = true;
     public float unitScale = 0.5f;
     private float timer;
@@ -55,7 +53,6 @@ public class Head : MonoBehaviour
 
     //private Coroutine lostControlHandler;
     //private Coroutine reverseInputHandler;
-    public int score;
 
     private static List<StepCommand> StepCommands => Manager.manager.realStepCommands;
     private static List<TimerCommand> TimerCommands => Manager.manager.realTimerCommands;
@@ -70,16 +67,18 @@ public class Head : MonoBehaviour
         angle = 0;
         Manager.manager.CreateFood();
     }
-    
-    private void CreatePoop(Vector3 position)
+
+    private IEnumerator CreatePoop(Vector3 position)
     {
         Manager.manager.poopPool.Get().transform.position = position;
+        yield return new WaitForSeconds(defaultTimerGap / Mathf.Sqrt(speedLevel) + Time.deltaTime);
+        Manager.manager.Match3Poop(position);
     }
 
     public void CreatePoop()
     {
         var position = TailTransform ? TailTransform.position : transform.position - (Vector3)(Vector2)now * unitScale;
-        CreatePoop(position);
+        StartCoroutine(CreatePoop(position));
     }
 
     private void CreateBody(Vector3 position)
@@ -202,8 +201,8 @@ public class Head : MonoBehaviour
     {
         if (other.tag.Equals("Food"))
         {
-            score += speedLevel;
-            Manager.manager.scoreText.text = $"Score: {score}";
+
+            Manager.manager.AddScore(speedLevel);
             Manager.manager.CreateFood();
             
             //Create a new body
@@ -245,7 +244,7 @@ public class Head : MonoBehaviour
         {
             case PoopEffectType.ReverseInput:
             {
-                AddTimerCommand<CmdReverseInput>(reverseTime);
+                AddTimerCommand<CmdReverseInput>(ReverseTime);
                 return;
                     
                 // Legacy version
@@ -290,7 +289,7 @@ public class Head : MonoBehaviour
             case PoopEffectType.CreateMole:
             {
                 Manager.manager.CreateMole();
-                break;
+                return;
             }
             default:
                 return;

@@ -8,14 +8,11 @@ public class MyCommand
     
     protected virtual void OnInit()
     {
-        commander = Manager.manager.head;
-        executed = false;
         tmpText = Manager.manager.textPool.Get().GetComponent<TMP_Text>();
     }
     
     protected virtual void Execute()
     {
-        executed = true;
         Manager.manager.textPool.Release(tmpText.gameObject);
     }
 
