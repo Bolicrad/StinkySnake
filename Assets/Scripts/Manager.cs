@@ -256,7 +256,7 @@ public class Manager : MonoBehaviour
         {
             Head.SnakeDieReason.HitSelf => "You ate your body.",
             Head.SnakeDieReason.HitWall => "You hit the boundary.",
-            Head.SnakeDieReason.Length0 => "Your lost too much weight.",
+            Head.SnakeDieReason.Length0 => "You lost too much weight.",
             Head.SnakeDieReason.PoopSnake => "An enemy ate your body.",
             _ => ""
         };
@@ -412,7 +412,7 @@ public class Manager : MonoBehaviour
 
     #endregion
     
-    #region Todo: Match3 Poop Snake Generation
+    #region Match3 Poop Snake Generation
 
     public void Match3Poop(Vector2 pos)
     {

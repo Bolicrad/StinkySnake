@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 656197541651765687}
   m_Layer: 0
   m_Name: PoopSnake
-  m_TagString: Body_PoopSnake
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

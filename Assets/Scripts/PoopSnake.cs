@@ -71,4 +71,19 @@ public class PoopSnake : Mole
         if (this && gameObject != null) Destroy(gameObject);
         Manager.manager.poopSnake = null;
     }
+    
+    private void OnTriggerEnter2D(Collider2D col)
+    {
+        if (col.CompareTag("Body"))
+        {
+            Manager.manager.SnakeDie(Head.SnakeDieReason.PoopSnake);
+        }
+
+        if (col.CompareTag("Head"))
+        {
+            Manager.manager.PlayAudio(6);
+            Manager.manager.AddScore(50);
+            Die();
+        }
+    }
 }

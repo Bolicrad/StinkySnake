@@ -66,6 +66,7 @@ public class Head : MonoBehaviour
     private IEnumerator CreatePoop(Vector3 position)
     {
         Manager.manager.poopPool.Get().transform.position = position;
+        Manager.manager.PlayAudio(8);
         yield return new WaitForSeconds(defaultTimerGap / Mathf.Sqrt(speedLevel) + Time.deltaTime);
         Manager.manager.Match3Poop(position);
     }
@@ -213,18 +214,9 @@ public class Head : MonoBehaviour
             DealPoopEffect();
         }
         
-        if (other.CompareTag("Mole"))
-        {
-            Manager.manager.PlayAudio(6);
-            Manager.manager.AddScore(20);
-            Destroy(other.gameObject);
-        }
-
         if (other.CompareTag("Body_PoopSnake"))
         {
-            Manager.manager.PlayAudio(6);
-            Manager.manager.AddScore(50);
-            Manager.manager.poopSnake.Die();
+            Manager.manager.SnakeDie(SnakeDieReason.PoopSnake);
         }
     }
 

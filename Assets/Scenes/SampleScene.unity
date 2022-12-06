@@ -1480,6 +1480,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 9a209f56991a64846a46d197ebe69fd5, type: 3}
   - {fileID: 8300000, guid: 31ef97ccf1843483aa6d29b4d6f1d592, type: 3}
   - {fileID: 8300000, guid: 31b8900bbf31f4bb2b25402c76a6222c, type: 3}
+  - {fileID: 8300000, guid: 63ea7762650d54881a7d23cf4226643d, type: 3}
   audioSource: {fileID: 1260629176}
   gridMax: {x: 0, y: 0}
 --- !u!82 &1260629176
@@ -1972,9 +1973,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1957590403}
   - component: {fileID: 1957590405}
-  - component: {fileID: 1957590404}
   m_Layer: 5
-  m_Name: Panel
+  m_Name: Panel_Main
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2005,36 +2005,6 @@ RectTransform:
   m_AnchoredPosition: {x: 540, y: 0}
   m_SizeDelta: {x: -1080, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1957590404
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1957590402}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!222 &1957590405
 CanvasRenderer:
   m_ObjectHideFlags: 0

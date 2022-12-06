@@ -28,6 +28,7 @@ public class Mole : MonoBehaviour
     protected void OnDestroy()
     {
         if(tmpText.gameObject.activeSelf) Manager.manager.textPool.Release(tmpText.gameObject);
+        GridPrinter.gridPrinter.drawingAim = false;
     }
 
     protected virtual IEnumerable<Instruction> Main()
@@ -205,11 +206,18 @@ public class Mole : MonoBehaviour
         return newDir;
     }
 
-    protected void OnTriggerEnter2D(Collider2D col)
+    private void OnTriggerEnter2D(Collider2D col)
     {
         if (col.CompareTag("Body"))
         {
             Manager.manager.SnakeDie(Head.SnakeDieReason.PoopSnake);
+        }
+
+        if (col.CompareTag("Head"))
+        {
+            Manager.manager.PlayAudio(6);
+            Manager.manager.AddScore(20);
+            Destroy(gameObject);
         }
     }
 
