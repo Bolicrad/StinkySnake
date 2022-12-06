@@ -10,27 +10,27 @@ using Vector3 = UnityEngine.Vector3;
 
 public class Mole : MonoBehaviour
 {
-    private Coroutine main;
-    private TMP_Text tmpText;
+    protected Coroutine main;
+    protected TMP_Text tmpText;
     // Start is called before the first frame update
-    void Start()
+    protected void Start()
     {
         tmpText = Manager.manager.textPool.Get().GetComponent<TMP_Text>();
         main = new Coroutine(Main());
     }
 
     // Update is called once per frame
-    void Update()
+    protected void Update()
     {
         main.Update();
     }
 
-    private void OnDestroy()
+    protected void OnDestroy()
     {
-        Manager.manager.textPool.Release(tmpText.gameObject);
+        if(tmpText.gameObject.activeSelf) Manager.manager.textPool.Release(tmpText.gameObject);
     }
 
-    IEnumerable<Instruction> Main()
+    protected virtual IEnumerable<Instruction> Main()
     {
         Vector2Int dir = Vector2Int.up;
         tmpText.text = "Summoned a Mole. Beat it!";
@@ -40,7 +40,7 @@ public class Mole : MonoBehaviour
             while (target == null)
             {
                 yield return ControlFlow.ExecuteWhileRunning(
-                    FindFood(targetFound => target = targetFound),
+                    Find(targetFound => target = targetFound, "Food"),
                     Wander(dir, finalDir => dir = finalDir));
                 if (target != null)
                 {
@@ -56,10 +56,10 @@ public class Mole : MonoBehaviour
         }
     }
 
-    IEnumerable<Instruction> FindFood(Action<Transform> targetFound)
+    protected IEnumerable<Instruction> Find(Action<Transform> targetFound, string tagToFind)
     {
         tmpText.text = "Mole: Searching for food.";
-        GameObject foodObj = GameObject.FindWithTag("Food");
+        GameObject foodObj = GameObject.FindWithTag(tagToFind);
         while (foodObj!=null &&
                Manager.manager.WorldToGridPoint(transform.position).x !=
                Manager.manager.WorldToGridPoint(foodObj.transform.position).x 
@@ -73,7 +73,7 @@ public class Mole : MonoBehaviour
         if(foodObj!=null) targetFound(foodObj.transform);
     }
 
-    IEnumerable<Instruction> Wander(Vector2Int startDir, Action<Vector2Int> finalDir)
+    protected IEnumerable<Instruction> Wander(Vector2Int startDir, Action<Vector2Int> finalDir)
     {
         Vector2Int dir = startDir;
         try
@@ -115,7 +115,7 @@ public class Mole : MonoBehaviour
         }
     }
 
-    IEnumerable<Instruction> DashToTarget(Transform target)
+    protected IEnumerable<Instruction> DashToTarget(Transform target)
     {
         Vector2Int dir = (Manager.manager.WorldToGridPoint(target.position)
                           - Manager.manager.WorldToGridPoint(transform.position));
@@ -147,23 +147,11 @@ public class Mole : MonoBehaviour
         }
     }
     
-    IEnumerable<Instruction> MoveBodyTo(Vector2 targetPos)
+    protected virtual IEnumerable<Instruction> CheckNextPos(Vector2 targetPos)
     {
         if (Manager.manager.IsPosOccupied(targetPos, out var cols))
         {
             Debug.Log($"Mole Enter: {cols[0].tag}");
-
-            if (cols[0].CompareTag("Head"))
-            {
-                Manager.manager.AddScore(20);
-                Destroy(gameObject);
-            }
-
-            if (cols[0].CompareTag("Body"))
-            {
-                Manager.manager.SnakeDie(Head.SnakeDieReason.PoopSnake);
-            }
-
             if (cols[0].CompareTag("Poop"))
             {
                 var poopShift = Manager.manager.GetUnoccupiedPos();
@@ -176,6 +164,11 @@ public class Mole : MonoBehaviour
                 Manager.manager.Match3Poop(poopShift);
             }
         }
+    }
+    
+    protected IEnumerable<Instruction> MoveBodyTo(Vector2 targetPos)
+    {
+        yield return ControlFlow.Call(CheckNextPos(targetPos));
 
         if (!Manager.manager.IsPosInRange(targetPos))
         {
@@ -183,16 +176,22 @@ public class Mole : MonoBehaviour
             Destroy(gameObject);
         }
 
-        yield return null;
+        if (!this || !gameObject) yield break;
+        yield return ControlFlow.Call(MoveTail(transform.position));
         transform.position = targetPos;
     }
 
-    Vector2 GetNextPos(Vector2Int dir)
+    protected virtual IEnumerable<Instruction> MoveTail(Vector3 temp)
+    {
+        yield return null;
+    }
+
+    protected Vector2 GetNextPos(Vector2Int dir)
     {
         return (Vector2)dir * 0.5f + (Vector2)transform.position;
     }
 
-    Vector2Int GetNewDir(Vector2Int dir)
+    protected Vector2Int GetNewDir(Vector2Int dir)
     {
         var newDir = dir;
         if (dir.x == 0)
@@ -206,7 +205,16 @@ public class Mole : MonoBehaviour
         return newDir;
     }
 
-    void RotateBody(Vector2Int dir)
+    protected void OnTriggerEnter2D(Collider2D col)
+    {
+        if (col.CompareTag("Body"))
+        {
+            Manager.manager.SnakeDie(Head.SnakeDieReason.PoopSnake);
+        }
+    }
+
+
+    protected void RotateBody(Vector2Int dir)
     {
         int angle = 0;
         if (dir == Vector2Int.up) angle = 0;

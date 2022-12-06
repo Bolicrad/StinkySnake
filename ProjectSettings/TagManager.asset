@@ -9,6 +9,8 @@ TagManager:
   - Head
   - Body
   - Boundary
+  - Mole
+  - Body_PoopSnake
   layers:
   - Default
   - TransparentFX

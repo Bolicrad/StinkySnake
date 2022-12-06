@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -29,7 +30,12 @@ public class Manager : MonoBehaviour
     public List<GameObject> tempPoopList;
 
     public GameObject foodPrefab;
-    
+
+    public GameObject poopSnakeBodyPrefab;
+    public GameObject poopSnakeHeadPrefab;
+    public Transform poopSnakeBodyParent;
+    public ObjectPool<GameObject> poopBodyPool;
+
     //public BoxCollider2D border;
     public SpriteRenderer spriteRenderer;
     public TMP_Text deathText;
@@ -50,6 +56,7 @@ public class Manager : MonoBehaviour
     
     public Button startButton;
     
+    public PoopSnake poopSnake;
     public Head head;
     private Vector3 borderSize;
     public AudioClip[] audioClips;
@@ -58,6 +65,16 @@ public class Manager : MonoBehaviour
     public AudioSource audioSource;
     private Coroutine ledHandler;
     public Vector2Int gridMax;
+
+    [Flags]
+    public enum DirectionEnum
+    {
+        None = 0b0000,
+        Left = 0b0001,
+        Right = 0b0010,
+        Up = 0b0100,
+        Down = 0b1000
+    }
 
     private void Awake()
     {
@@ -76,8 +93,37 @@ public class Manager : MonoBehaviour
         textPool = new ObjectPool<GameObject>(CreateText, OnGetText, OnReleaseText, OnDestroyText, true, 5, 20);
         bodyPool = new ObjectPool<GameObject>(CreateBody, OnGetBody, OnReleaseBody, OnDestroyBody, true, 10, 50);
         poopPool = new ObjectPool<GameObject>(CreatePoop, OnGetPoop, OnReleasePoop, OnDestroyPoop, true, 25, 100);
+        poopBodyPool = new ObjectPool<GameObject>(CreatePoopBody, OnGetPoopBody, OnReleasePoopBody, OnDestroyPoopBody,
+            true, 10, 50);
     }
 
+    #region Poop Snake Body Pooling
+
+        private void OnDestroyPoopBody(GameObject obj)
+        {
+            Debug.Log($"Poop Snake Body Pool is full, Body {obj.GetInstanceID()} is destroyed.");
+            DestroyImmediate(obj);
+        }
+    
+        private void OnReleasePoopBody(GameObject obj)
+        {
+            obj.transform.SetParent(recycleBin);
+            obj.SetActive(false);
+        }
+    
+        private void OnGetPoopBody(GameObject obj)
+        {
+            obj.transform.SetParent(poopSnakeBodyParent);
+            obj.SetActive(true);
+        }
+    
+        private GameObject CreatePoopBody()
+        {
+            return Instantiate(poopSnakeBodyPrefab);
+        }
+
+    #endregion
+    
     #region Poop Pooling
 
     private void OnDestroyPoop(GameObject obj)
@@ -199,7 +245,7 @@ public class Manager : MonoBehaviour
     {
         score = 0;
         head = Instantiate(headPrefab).GetComponent<Head>();
-        head.transform.position = transform.position;
+        head.transform.position = GetUnoccupiedPos();
         startButton.gameObject.SetActive(false);
         deathText.text = "Poop Effects:";
         Time.timeScale = 1;
@@ -210,8 +256,8 @@ public class Manager : MonoBehaviour
         {
             Head.SnakeDieReason.HitSelf => "You ate your body.",
             Head.SnakeDieReason.HitWall => "You hit the boundary.",
-            Head.SnakeDieReason.Length0 => "Your body fell into the void.",
-            Head.SnakeDieReason.PoopSnake => "Another Snake ate you.",
+            Head.SnakeDieReason.Length0 => "Your lost too much weight.",
+            Head.SnakeDieReason.PoopSnake => "An enemy ate your body.",
             _ => ""
         };
         scoreText.text = $"Score: {score}\nHigh Score: {HighScore}";
@@ -226,7 +272,7 @@ public class Manager : MonoBehaviour
         {
             for (int i = moleParent.childCount - 1; i >= 0; i--)
             {
-                DestroyImmediate(moleParent.GetChild(i).gameObject);
+                Destroy(moleParent.GetChild(i).gameObject);
             }
         }
         
@@ -234,6 +280,12 @@ public class Manager : MonoBehaviour
         
         Destroy(head.food);
         head.gameObject.SetActive(false);
+
+        if (poopSnake)
+        {
+            poopSnake.Die();
+            poopSnake = null;
+        }
         
         foreach (var command in realStepCommands)
         {
@@ -282,6 +334,29 @@ public class Manager : MonoBehaviour
         else head.food.transform.position = pos;
     }
 
+    public IEnumerator CreatePoopSnake(Vector2Int gridPos, DirectionEnum direction)
+    {
+        poopSnake = Instantiate(poopSnakeHeadPrefab, GridToWorldPos(gridPos), Quaternion.identity)
+            .GetComponent<PoopSnake>();
+        poopSnake.gameObject.SetActive(false);
+        PlayAudio(7);
+        var gap = audioClips[7].length / tempPoopList.Count;
+        for (var i = tempPoopList.Count - 1; i >= 0; i--)
+        {
+            yield return new WaitForSeconds(gap);
+            if (i > 0)
+            {
+                Instantiate(poopSnakeBodyPrefab, tempPoopList[i].transform.position, Quaternion.identity,
+                    poopSnakeBodyParent);
+            }
+            DestroyImmediate(tempPoopList[i]);
+        }
+        
+        poopSnake.gameObject.SetActive(true);
+        var dir = CalculateOrientation(direction);
+        poopSnake.Init(dir);
+    }
+
     #endregion
 
     #region Grid Management
@@ -292,7 +367,7 @@ public class Manager : MonoBehaviour
 
         while (IsPosOccupied(fixedPos, out var cols))
         {
-            if (cols.Length > 0) Debug.Log(cols);
+            if (cols.Length > 0) Debug.Log(cols[0].tag);
             fixedPos = GetRandomPos();
         }
 
@@ -341,41 +416,93 @@ public class Manager : MonoBehaviour
 
     public void Match3Poop(Vector2 pos)
     {
+        if (poopSnake && poopSnake.gameObject.activeSelf) return;
         var gridPos = WorldToGridPoint(pos);
         tempPoopList.Clear();
         if (GetPoopFromGridPos(gridPos) == null) return;
-        Match3Recursive(gridPos);
-        if (tempPoopList.Count >= 3)
-        {
-            Debug.Log($"Match 3 result: There are {tempPoopList.Count} poop connected with the one at {gridPos}.");
-        }
+        var orientation = Match3Recursive(gridPos);
+        
+        if (tempPoopList.Count < 3) return;
+        Debug.Log(
+            $"Match 3 result: There are {tempPoopList.Count} poop connected with the one at {gridPos}, the available directions are {orientation}.");
+
+
+        StartCoroutine(CreatePoopSnake(gridPos, orientation));
     }
 
-    private void Match3Recursive(Vector2Int gridPos)
+    private DirectionEnum Match3Recursive(Vector2Int gridPos)
     {
         var poop = GetPoopFromGridPos(gridPos);
-        if (poop == null) return;
+        if (poop == null) return DirectionEnum.None;
         tempPoopList.Add(poop);
+        DirectionEnum dirtyDirections = DirectionEnum.None;
+
         var left = GetPoopFromGridPos(gridPos + Vector2Int.left);
         if (left!=null && !tempPoopList.Contains(left))
         {
             Match3Recursive(gridPos + Vector2Int.left);
+            dirtyDirections |= DirectionEnum.Left;
         }
         var right = GetPoopFromGridPos(gridPos + Vector2Int.right);
         if (right!=null && !tempPoopList.Contains(right))
         {
             Match3Recursive(gridPos + Vector2Int.right);
+            dirtyDirections |= DirectionEnum.Right;
         }        
         var up = GetPoopFromGridPos(gridPos + Vector2Int.up);
         if (up!=null && !tempPoopList.Contains(up))
         {
             Match3Recursive(gridPos + Vector2Int.up);
+            dirtyDirections |= DirectionEnum.Up;
         }        
         var down = GetPoopFromGridPos(gridPos + Vector2Int.down);
         if (down!=null && !tempPoopList.Contains(down))
         {
             Match3Recursive(gridPos + Vector2Int.down);
+            dirtyDirections |= DirectionEnum.Down;
         }
+
+        return ~dirtyDirections;
+    }
+
+    private Vector2Int CalculateOrientation(DirectionEnum direction)
+    {
+        if (direction.HasFlag(DirectionEnum.Left) && !direction.HasFlag(DirectionEnum.Right))
+        {
+            return Vector2Int.left;
+        }
+
+        if (direction.HasFlag(DirectionEnum.Right) && !direction.HasFlag(DirectionEnum.Left))
+        {
+            return Vector2Int.right;
+        }
+        
+        if(direction.HasFlag(DirectionEnum.Up) && !direction.HasFlag(DirectionEnum.Down))
+        {
+            return Vector2Int.up;
+        }
+        
+        if(direction.HasFlag(DirectionEnum.Down) && !direction.HasFlag(DirectionEnum.Up))
+        {
+            return Vector2Int.down;
+        }
+
+        if (direction.HasFlag(DirectionEnum.Left))
+        {
+            return Vector2Int.left;
+        }
+        
+        if (direction.HasFlag(DirectionEnum.Right))
+        {
+            return Vector2Int.right;
+        }
+        
+        if (direction.HasFlag(DirectionEnum.Up))
+        {
+            return Vector2Int.up;
+        }
+        
+        return Vector2Int.down;
     }
 
     private GameObject GetPoopFromGridPos(Vector2Int gridPos)

@@ -285,7 +285,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 306.25504}
+  m_AnchoredPosition: {x: 0, y: 306.255}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &277310007
@@ -453,13 +453,44 @@ RectTransform:
   m_Children:
   - {fileID: 1957590403}
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!1 &681263355
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 681263356}
+  m_Layer: 0
+  m_Name: PoopBodyParent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &681263356
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 681263355}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &718920649
 GameObject:
   m_ObjectHideFlags: 0
@@ -807,7 +838,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 6
+  m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &848732464
 GameObject:
@@ -1427,14 +1458,18 @@ MonoBehaviour:
   poopParent: {fileID: 1759395152}
   tempPoopList: []
   foodPrefab: {fileID: 3021192735858863081, guid: 20cbe9d70c5f748edb39a8522b9b1bd5, type: 3}
-  border: {fileID: 1260629174}
+  poopSnakeBodyPrefab: {fileID: 3021192735858863081, guid: eb55a54e03cb841799f3988b7d3029bb, type: 3}
+  poopSnakeHeadPrefab: {fileID: 3021192735858863081, guid: a061fa6535c86493ab5eaae5371deb77, type: 3}
+  poopSnakeBodyParent: {fileID: 681263356}
   spriteRenderer: {fileID: 1260629177}
   deathText: {fileID: 1067714281}
   content: {fileID: 277310006}
   textPrefab: {fileID: 2966274720668184686, guid: 0840ce6e54db04990b7483a5e33c7e7a, type: 3}
   recycleBin: {fileID: 1714152175}
+  score: 0
   scoreText: {fileID: 792192173}
   startButton: {fileID: 848732466}
+  poopSnake: {fileID: 0}
   head: {fileID: 0}
   audioClips:
   - {fileID: 8300000, guid: bab20135d7877448e874101235a6201c, type: 3}
@@ -1443,6 +1478,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: bae9cf3da045a4370936b285e6eb68d4, type: 3}
   - {fileID: 8300000, guid: 8174e19d97d004d7aba160fc14344cf3, type: 3}
   - {fileID: 8300000, guid: 9a209f56991a64846a46d197ebe69fd5, type: 3}
+  - {fileID: 8300000, guid: 31ef97ccf1843483aa6d29b4d6f1d592, type: 3}
+  - {fileID: 8300000, guid: 31b8900bbf31f4bb2b25402c76a6222c, type: 3}
   audioSource: {fileID: 1260629176}
   gridMax: {x: 0, y: 0}
 --- !u!82 &1260629176
@@ -1757,7 +1794,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1759395151
 GameObject:

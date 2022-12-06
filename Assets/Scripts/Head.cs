@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +9,7 @@ public class Head : MonoBehaviour
 {
     #region Enums
 
-    public enum PoopEffectType
+    private enum PoopEffectType
     {
         ReduceLength,
         ReverseInput,
@@ -109,10 +108,10 @@ public class Head : MonoBehaviour
 
     public void Start()
     {
-        for (var i = 0; i < 3; ++i)
-        {
-            CreateBody(transform.position - (i + 1) * new Vector3(0, unitScale, 0));
-        }
+        // for (var i = 0; i < 3; ++i)
+        // {
+        //     CreateBody(transform.position - (i + 1) * new Vector3(0, unitScale, 0));
+        // }
         now = Vector2Int.up;
         angle = 0;
         Manager.manager.CreateFood();
@@ -186,8 +185,6 @@ public class Head : MonoBehaviour
             TailTransform.SetAsFirstSibling();
         }
         transform.eulerAngles = angle * Vector3.forward;
-
-
     }
 
     #endregion
@@ -215,12 +212,19 @@ public class Head : MonoBehaviour
             Manager.manager.poopPool.Release(other.gameObject);
             DealPoopEffect();
         }
-
-        // ReSharper disable once Unity.UnknownTag
+        
         if (other.CompareTag("Mole"))
         {
+            Manager.manager.PlayAudio(6);
             Manager.manager.AddScore(20);
             Destroy(other.gameObject);
+        }
+
+        if (other.CompareTag("Body_PoopSnake"))
+        {
+            Manager.manager.PlayAudio(6);
+            Manager.manager.AddScore(50);
+            Manager.manager.poopSnake.Die();
         }
     }
 
@@ -258,7 +262,7 @@ public class Head : MonoBehaviour
             case PoopEffectType.Speedup:
             {
                 Manager.manager.PlayAudio(2);
-                Manager.manager.PrintToScreenOneTime($"Speed Level Up to {speedLevel++}");
+                Manager.manager.PrintToScreenOneTime($"Speed Level Up to {++speedLevel}");
                 
                 break;
             }
@@ -267,7 +271,6 @@ public class Head : MonoBehaviour
                 Manager.manager.CreateMole();
                 break;
             }
-            default: break;
         }
     }
 
